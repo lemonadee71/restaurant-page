@@ -31,20 +31,34 @@ const routes = [
     component: _pages__WEBPACK_IMPORTED_MODULE_1__.Menu,
   },
   {
+    path: 'about',
+    name: 'About Us',
+  },
+  {
     path: '/contact',
     name: 'Contact',
     component: _pages__WEBPACK_IMPORTED_MODULE_1__.Contact,
   },
 ];
 
-const App = () => _component__WEBPACK_IMPORTED_MODULE_0__.html`<div>
-    <ul>
-      ${routes.map(
-        (route) => `<li><a href="#${route.path}">${route.name}</a></li>`
-      )}
-    </ul>
-  </div>
-  ${(0,_Router__WEBPACK_IMPORTED_MODULE_2__.default)(routes, _pages__WEBPACK_IMPORTED_MODULE_1__.Error)}`;
+const App = () => _component__WEBPACK_IMPORTED_MODULE_0__.html`
+  <header class="header">
+    <span class="header__brand title">My Restaurant</span>
+    <nav class="header__nav nav">
+      <ul class="nav__menu">
+        ${routes.map(
+          (route) =>
+            _component__WEBPACK_IMPORTED_MODULE_0__.html`
+              <li class="nav__item">
+                <a class="nav__link" href="#${route.path}">${route.name}</a>
+              </li>
+            `
+        )}
+      </ul>
+    </nav>
+  </header>
+  <main>${(0,_Router__WEBPACK_IMPORTED_MODULE_2__.default)(routes, _pages__WEBPACK_IMPORTED_MODULE_1__.Error)}</main>
+`;
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (App);
 
@@ -568,7 +582,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _component__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../component */ "./src/component.js");
 
 
-const Contact = () => _component__WEBPACK_IMPORTED_MODULE_0__.html`<h1>This is my contact</h1>`;
+const Contact = () => _component__WEBPACK_IMPORTED_MODULE_0__.html`<h1 class="header-text">This is my contact</h1>`;
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (Contact);
 
@@ -588,7 +602,15 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _component__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../component */ "./src/component.js");
 
 
-const Error = () => _component__WEBPACK_IMPORTED_MODULE_0__.html`<h1>Page not found</h1>`;
+const Error = () =>
+  _component__WEBPACK_IMPORTED_MODULE_0__.html`
+    <div class="error">
+      <h1 class="error__message">Page not found</h1>
+      <p class="error__link" ${{ onClick: () => window.history.back() }}>
+        Go back
+      </p>
+    </div>
+  `;
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (Error);
 
@@ -608,7 +630,13 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _component__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../component */ "./src/component.js");
 
 
-const Home = () => _component__WEBPACK_IMPORTED_MODULE_0__.html`<h1>This is my home</h1>`;
+const Home = () => _component__WEBPACK_IMPORTED_MODULE_0__.html`
+  <h1 class="text--title">Lorem ipsum dolor sit amet.</h1>
+  <p>
+    Lorem ipsum, dolor sit amet consectetur adipisicing elit. Ipsum, accusamus!
+  </p>
+  <div><button>Order now</button><a href="#/menu">See menu</a></div>
+`;
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (Home);
 
@@ -628,7 +656,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _component__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../component */ "./src/component.js");
 
 
-const Menu = () => _component__WEBPACK_IMPORTED_MODULE_0__.html`<h1>This is my Menu</h1>`;
+const Menu = () => _component__WEBPACK_IMPORTED_MODULE_0__.html`<h1 class="header-text">This is my Menu</h1>`;
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (Menu);
 
