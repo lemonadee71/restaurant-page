@@ -2,7 +2,7 @@ import { html, createState } from './component';
 import event from './event';
 
 // Will only render one component at a time
-const Router = (routes, error) => {
+const Router = (routes, error, className = '', tagName = 'div') => {
   const currentLocation = createState(
     window.location.hash.replace('#', '') || '/'
   );
@@ -22,7 +22,11 @@ const Router = (routes, error) => {
   };
 
   return html`
-    <div ${{ $content: currentLocation.bindValue(changeContent) }}></div>
+    <${tagName} ${className && `class="${className}"`} 
+    ${{
+      $content: currentLocation.bindValue(changeContent),
+    }}>
+    </${tagName}>
   `;
 };
 

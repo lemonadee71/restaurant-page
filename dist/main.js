@@ -33,6 +33,7 @@ const routes = [
   {
     path: 'about',
     name: 'About Us',
+    component: _pages__WEBPACK_IMPORTED_MODULE_1__.About,
   },
   {
     path: '/contact',
@@ -50,14 +51,19 @@ const App = () => _component__WEBPACK_IMPORTED_MODULE_0__.html`
           (route) =>
             _component__WEBPACK_IMPORTED_MODULE_0__.html`
               <li class="nav__item">
-                <a class="nav__link" href="#${route.path}">${route.name}</a>
+                <a class="nav__link link" href="#${route.path}">
+                  ${route.name}
+                </a>
               </li>
             `
         )}
       </ul>
     </nav>
   </header>
-  <main>${(0,_Router__WEBPACK_IMPORTED_MODULE_2__.default)(routes, _pages__WEBPACK_IMPORTED_MODULE_1__.Error)}</main>
+  ${(0,_Router__WEBPACK_IMPORTED_MODULE_2__.default)(routes, _pages__WEBPACK_IMPORTED_MODULE_1__.Error, 'container', 'main')}
+  <footer class="footer">
+    <div class="footer__links"></div>
+  </footer>
 `;
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (App);
@@ -81,7 +87,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 // Will only render one component at a time
-const Router = (routes, error) => {
+const Router = (routes, error, className = '', tagName = 'div') => {
   const currentLocation = (0,_component__WEBPACK_IMPORTED_MODULE_0__.createState)(
     window.location.hash.replace('#', '') || '/'
   );
@@ -101,7 +107,11 @@ const Router = (routes, error) => {
   };
 
   return _component__WEBPACK_IMPORTED_MODULE_0__.html`
-    <div ${{ $content: currentLocation.bindValue(changeContent) }}></div>
+    <${tagName} ${className && `class="${className}"`} 
+    ${{
+      $content: currentLocation.bindValue(changeContent),
+    }}>
+    </${tagName}>
   `;
 };
 
@@ -569,6 +579,26 @@ const event = new EventEmitter();
 
 /***/ }),
 
+/***/ "./src/pages/About.js":
+/*!****************************!*\
+  !*** ./src/pages/About.js ***!
+  \****************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _component__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../component */ "./src/component.js");
+
+
+const About = () => _component__WEBPACK_IMPORTED_MODULE_0__.html`<h1 class="header-text">This is my About</h1>`;
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (About);
+
+
+/***/ }),
+
 /***/ "./src/pages/Contact.js":
 /*!******************************!*\
   !*** ./src/pages/Contact.js ***!
@@ -606,7 +636,7 @@ const Error = () =>
   _component__WEBPACK_IMPORTED_MODULE_0__.html`
     <div class="error">
       <h1 class="error__message">Page not found</h1>
-      <p class="error__link" ${{ onClick: () => window.history.back() }}>
+      <p class="link error__link" ${{ onClick: () => window.history.back() }}>
         Go back
       </p>
     </div>
@@ -631,11 +661,27 @@ __webpack_require__.r(__webpack_exports__);
 
 
 const Home = () => _component__WEBPACK_IMPORTED_MODULE_0__.html`
-  <h1 class="text--title">Lorem ipsum dolor sit amet.</h1>
-  <p>
-    Lorem ipsum, dolor sit amet consectetur adipisicing elit. Ipsum, accusamus!
-  </p>
-  <div><button>Order now</button><a href="#/menu">See menu</a></div>
+  <div class="banner">
+    <div class="banner__column-l">
+      <h1 class="banner__title title">Welcome to our Restaurant</h1>
+      <p class="banner__subtext">
+        Lorem ipsum, dolor sit amet consectetur adipisicing elit. Ipsum,
+        accusamus! Lorem ipsum, dolor sit amet consectetur adipisicing elit.
+        Amet, vel!
+      </p>
+      <div class="banner__btns">
+        <button class="banner__btn">Order now</button>
+        <a class="banner__link link" href="#/menu">See menu</a>
+      </div>
+    </div>
+    <div class="banner__column-r">
+      <img
+        class="banner__img"
+        src="./assets/images/banner_image.jpg"
+        alt="picture of ramen"
+      />
+    </div>
+  </div>
 `;
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (Home);
@@ -674,12 +720,15 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "Home": () => (/* reexport safe */ _Home__WEBPACK_IMPORTED_MODULE_0__.default),
 /* harmony export */   "Menu": () => (/* reexport safe */ _Menu__WEBPACK_IMPORTED_MODULE_1__.default),
 /* harmony export */   "Contact": () => (/* reexport safe */ _Contact__WEBPACK_IMPORTED_MODULE_2__.default),
-/* harmony export */   "Error": () => (/* reexport safe */ _Error__WEBPACK_IMPORTED_MODULE_3__.default)
+/* harmony export */   "Error": () => (/* reexport safe */ _Error__WEBPACK_IMPORTED_MODULE_4__.default),
+/* harmony export */   "About": () => (/* reexport safe */ _About__WEBPACK_IMPORTED_MODULE_3__.default)
 /* harmony export */ });
 /* harmony import */ var _Home__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./Home */ "./src/pages/Home.js");
 /* harmony import */ var _Menu__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./Menu */ "./src/pages/Menu.js");
 /* harmony import */ var _Contact__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./Contact */ "./src/pages/Contact.js");
-/* harmony import */ var _Error__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./Error */ "./src/pages/Error.js");
+/* harmony import */ var _About__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./About */ "./src/pages/About.js");
+/* harmony import */ var _Error__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./Error */ "./src/pages/Error.js");
+
 
 
 
@@ -764,7 +813,7 @@ window.addEventListener('hashchange', () => {
   _event__WEBPACK_IMPORTED_MODULE_2__.default.emit('hashchange', window.location.hash.replace('#', ''));
 });
 
-document.body.appendChild((0,_component__WEBPACK_IMPORTED_MODULE_1__.render)((0,_App__WEBPACK_IMPORTED_MODULE_0__.default)()));
+document.body.prepend((0,_component__WEBPACK_IMPORTED_MODULE_1__.render)((0,_App__WEBPACK_IMPORTED_MODULE_0__.default)()));
 
 })();
 

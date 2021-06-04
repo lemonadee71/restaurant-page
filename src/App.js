@@ -16,6 +16,7 @@ const routes = [
   {
     path: 'about',
     name: 'About Us',
+    component: pages.About,
   },
   {
     path: '/contact',
@@ -33,14 +34,19 @@ const App = () => html`
           (route) =>
             html`
               <li class="nav__item">
-                <a class="nav__link" href="#${route.path}">${route.name}</a>
+                <a class="nav__link link" href="#${route.path}">
+                  ${route.name}
+                </a>
               </li>
             `
         )}
       </ul>
     </nav>
   </header>
-  <main>${Router(routes, pages.Error)}</main>
+  ${Router(routes, pages.Error, 'container', 'main')}
+  <footer class="footer">
+    <div class="footer__links"></div>
+  </footer>
 `;
 
 export default App;

@@ -6,4 +6,4 @@ window.addEventListener('hashchange', () => {
   event.emit('hashchange', window.location.hash.replace('#', ''));
 });
 
-document.body.appendChild(render(App()));
+document.body.prepend(render(App()));

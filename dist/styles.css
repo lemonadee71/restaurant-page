@@ -8,7 +8,29 @@ body {
   font-family: 'Roboto', sans-serif;
 }
 
+.link {
+  color: black;
+  text-decoration: none;
+}
+
+.link:hover {
+  opacity: 0.8;
+}
+
+.title {
+  font-family: 'Poppins', sans-serif;
+}
+
+.container {
+  width: 90%;
+  margin: auto;
+}
+
 .header {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  background-color: white;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -17,7 +39,7 @@ body {
 }
 
 .header__brand {
-  font-size: 2rem;
+  font-size: min(2rem, 5vmin);
   font-weight: bold;
   margin-right: 0.7rem;
 }
@@ -41,17 +63,34 @@ body {
 
 .nav__link {
   font-size: 1.3rem;
-  color: black;
-  text-decoration: none;
   margin: 0 0.3rem;
 }
 
-.nav__link:hover {
-  opacity: 0.8;
+.banner {
+  display: flex;
 }
 
-.title {
-  font-family: 'Poppins', sans-serif;
+.banner__column-l {
+  width: 40%;
+  margin-right: 2rem;
+}
+
+.banner__column-r {
+  width: 60%;
+}
+
+.banner__btn {
+  padding: 0.4rem 0.8rem;
+  font-size: 1rem;
+  margin-right: 20px;
+}
+
+.banner__link {
+  font-size: 1.1rem;
+}
+
+.banner__img {
+  width: 100%;
 }
 
 .error {
@@ -73,8 +112,4 @@ body {
   text-decoration: underline;
   color: rgb(43, 41, 41);
   font-size: min(1.5rem, 3vmax);
-}
-
-.error__link:hover {
-  opacity: 0.8;
 }
