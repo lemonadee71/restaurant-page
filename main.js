@@ -523,6 +523,42 @@ const createState = (initValue = null) => {
 
 /***/ }),
 
+/***/ "./src/components/Card.js":
+/*!********************************!*\
+  !*** ./src/components/Card.js ***!
+  \********************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _component__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../component */ "./src/component.js");
+
+
+const Card = () =>
+  _component__WEBPACK_IMPORTED_MODULE_0__.html`<div class="card">
+    <img
+      class="card__img"
+      src="./assets/images/placeholder.png"
+      alt="placeholder"
+    />
+    <div class="card__body">
+      <h1 class="title card__title">This is a card</h1>
+      <p class="card__text">
+        Lorem ipsum dolor sit amet consectetur adipisicing elit. Tempore
+        officiis mollitia obcaecati officia repellat dolores.
+      </p>
+      <hr />
+      <p class="card__subtext">Lorem ipsum dolor sit amet.</p>
+    </div>
+  </div>`;
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (Card);
+
+
+/***/ }),
+
 /***/ "./src/event.js":
 /*!**********************!*\
   !*** ./src/event.js ***!
@@ -592,7 +628,23 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _component__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../component */ "./src/component.js");
 
 
-const About = () => _component__WEBPACK_IMPORTED_MODULE_0__.html`<h1 class="header-text">This is my About</h1>`;
+const About = () =>
+  _component__WEBPACK_IMPORTED_MODULE_0__.html`<h1 class="title title--centered">This is my About</h1>
+    <p>
+      Lorem ipsum dolor sit amet consectetur, adipisicing elit. Exercitationem
+      id numquam inventore porro animi quia repellat nisi eum voluptatibus
+      aspernatur, dolor quibusdam autem quaerat doloribus ut quis consequatur!
+      Suscipit, accusantium! Lorem ipsum dolor sit amet consectetur adipisicing
+      elit. Mollitia delectus, eius quod in eligendi harum minima perferendis
+      ex, officiis odit molestiae ipsam quam provident excepturi enim saepe
+      adipisci eaque. Ut?
+    </p>
+    <p>
+      Lorem, ipsum dolor sit amet consectetur adipisicing elit. Corrupti ipsam
+      voluptatum deserunt ullam quibusdam expedita ratione iure nesciunt,
+      accusantium dolorum? Lorem ipsum dolor sit amet consectetur adipisicing
+      elit. Deleniti cupiditate saepe mollitia est asperiores beatae.
+    </p>`;
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (About);
 
@@ -610,9 +662,55 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 /* harmony import */ var _component__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../component */ "./src/component.js");
+/* harmony import */ var _event__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../event */ "./src/event.js");
 
 
-const Contact = () => _component__WEBPACK_IMPORTED_MODULE_0__.html`<h1 class="header-text">This is my contact</h1>`;
+
+const Contact = () => _component__WEBPACK_IMPORTED_MODULE_0__.html`<h1 class="title title--centered">Message us</h1>
+  <form
+    class="form"
+    ${{
+      onChange: (e) => {
+        _event__WEBPACK_IMPORTED_MODULE_1__.default.emit(
+          'form input',
+          [...e.currentTarget.elements].some((el) => el.value)
+        );
+      },
+      onSubmit: (e) => {
+        e.preventDefault();
+        alert('Thank you for your message');
+        e.target.reset();
+        _event__WEBPACK_IMPORTED_MODULE_1__.default.emit('form input', false);
+      },
+    }}
+  >
+    <input
+      class="form__input"
+      type="text"
+      name="name"
+      id="name"
+      placeholder="Your name"
+      required
+    />
+    <input
+      class="form__input"
+      type="email"
+      name="email"
+      id="email"
+      placeholder="Your email"
+      required
+    />
+    <textarea
+      class="form__textarea"
+      name="message"
+      id="message"
+      cols="30"
+      rows="15"
+      placeholder="Your message"
+      required
+    ></textarea>
+    <button class="form__submit" type="submit">Send</button>
+  </form>`;
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (Contact);
 
@@ -700,9 +798,27 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 /* harmony import */ var _component__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../component */ "./src/component.js");
+/* harmony import */ var _components_Card__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../components/Card */ "./src/components/Card.js");
 
 
-const Menu = () => _component__WEBPACK_IMPORTED_MODULE_0__.html`<h1 class="header-text">This is my Menu</h1>`;
+
+const Menu = () =>
+  _component__WEBPACK_IMPORTED_MODULE_0__.html`
+    <aside class="sidenav">
+      <ul class="nav__menu sidenav__menu">
+        ${new Array(5).fill('Category').map(
+          (str, i) =>
+            _component__WEBPACK_IMPORTED_MODULE_0__.html`<li class="nav__item sidenav__item">
+              <a class="link sidenav__link" href="#/">${str} ${i + 1}</a>
+            </li>`
+        )}
+      </ul>
+    </aside>
+    <section class="menu">
+      <h1 class="title">Category title</h1>
+      ${new Array(10).fill((0,_components_Card__WEBPACK_IMPORTED_MODULE_1__.default)())}
+    </section>
+  `;
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (Menu);
 
@@ -809,8 +925,21 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+let formHasValue = false;
+
+_event__WEBPACK_IMPORTED_MODULE_2__.default.on('form input', (hasInput) => {
+  formHasValue = hasInput;
+});
+
 window.addEventListener('hashchange', () => {
   _event__WEBPACK_IMPORTED_MODULE_2__.default.emit('hashchange', window.location.hash.replace('#', ''));
+});
+
+window.addEventListener('beforeunload', (e) => {
+  if (formHasValue && window.location.hash.replace('#', '') === '/contact') {
+    e.preventDefault();
+    e.returnValue = '';
+  }
 });
 
 document.body.prepend((0,_component__WEBPACK_IMPORTED_MODULE_1__.render)((0,_App__WEBPACK_IMPORTED_MODULE_0__.default)()));
