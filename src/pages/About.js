@@ -1,4 +1,4 @@
-import { html } from '../component';
+import { html } from 'poor-man-jsx';
 
 const About = () =>
   html`<h1 class="title title--centered">This is my About</h1>

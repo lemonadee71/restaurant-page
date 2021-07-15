@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "poor-man-jsx": "^1.0.1",
     "webpack": "^5.38.1",
     "webpack-cli": "^4.7.0"
   }

@@ -1,4 +1,4 @@
-import { html } from '../component';
+import { html } from 'poor-man-jsx';
 import Card from '../components/Card';
 
 const Menu = () =>

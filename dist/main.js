@@ -2,6 +2,454 @@
 /******/ 	"use strict";
 /******/ 	var __webpack_modules__ = ({
 
+/***/ "./node_modules/poor-man-jsx/index.js":
+/*!********************************************!*\
+  !*** ./node_modules/poor-man-jsx/index.js ***!
+  \********************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "settings": () => (/* binding */ settings),
+/* harmony export */   "html": () => (/* binding */ parseString),
+/* harmony export */   "createElementFromString": () => (/* binding */ createElementFromString),
+/* harmony export */   "render": () => (/* binding */ render),
+/* harmony export */   "createState": () => (/* binding */ createState)
+/* harmony export */ });
+// This is to hide the ref property an invoked state returns
+// which is a reference to the original object
+// to make sure we won't be able to access it outside of its intended use
+const REF = Symbol('ref');
+
+// classes
+class Template {
+  constructor(str, handlers) {
+    this.str = str;
+    this.handlers = handlers;
+  }
+}
+
+const mockEl = document.createElement('div');
+const defaultProps = [
+  'textContent',
+  'innerHTML',
+  'outerHTML',
+  'innerText',
+  'style',
+];
+const booleanAttributes = [
+  'checked',
+  'selected',
+  'disabled',
+  'readonly',
+  'multiple',
+  'ismap',
+  'noresize',
+  'reversed',
+  'autocomplete',
+];
+
+const settings = {
+  addDefaultProp: (...prop) => defaultProps.push(...prop),
+  addBooleanAttr: (...attr) => booleanAttributes.push(...attr),
+};
+
+// is functions
+const isObject = (val) => typeof val === 'object';
+
+const isArray = (val) => Array.isArray(val);
+
+const isTemplate = (val) => val instanceof Template;
+
+const isState = (key) => key.startsWith('$');
+
+const isEventListener = (key) => key.toLowerCase().startsWith('on');
+
+const isDefaultProp = (key) => defaultProps.includes(key);
+
+const isStyleAttribute = (key) => key in mockEl.style;
+
+const isBooleanAttribute = (attr) => booleanAttributes.includes(attr);
+
+// utils
+const uniqid = (length = 8) => Math.random().toString(36).substr(2, length);
+
+const pipe = (args, ...fns) =>
+  fns.reduce((prevResult, fn) => fn(prevResult), args);
+
+const reduceValue = (value, fn = null) => (fn ? fn.call(null, value) : value);
+
+const reduceNode = (node) => (isTemplate(node) ? render(node) : node);
+
+const reduceHandlerArray = (arr) =>
+  arr.reduce(
+    (acc, item) => {
+      acc.str.push(item.str);
+      acc.handlers.push(item.handlers);
+
+      return acc;
+    },
+    { str: [], handlers: [] }
+  );
+
+const determineType = (key) => {
+  // Any unrecognizable key will be treated as attr
+  let type = 'attr';
+  let k = key;
+
+  if (isState(key)) {
+    type = 'state';
+  } else if (isEventListener(key)) {
+    type = 'listener';
+  } else if (isDefaultProp(key)) {
+    type = 'prop';
+  } else if (isStyleAttribute(key)) {
+    type = 'style';
+  } else if (key === 'children') {
+    type = 'children';
+  }
+
+  if (type === 'listener') {
+    k = key.toLowerCase();
+  }
+
+  return [k.replace(/^(\$|on)/gi, ''), type];
+};
+
+const batchSameTypes = (obj) => {
+  const batched = Object.entries(obj).reduce((acc, [rawKey, value]) => {
+    const [key, type] = determineType(rawKey);
+
+    if (!acc[type]) {
+      acc[type] = {};
+    }
+
+    acc[type][key] = value;
+
+    return acc;
+  }, {});
+
+  if (batched.state) {
+    batched.state = batchSameTypes(batched.state);
+  }
+
+  return batched;
+};
+
+function generateHandler(type, obj) {
+  const id = uniqid();
+  const seed = uniqid(4);
+  const attrName = `data-${type}-${seed}`;
+  const dataAttr = `${attrName}="${id}"`;
+  const handlers = [];
+
+  Object.entries(obj).forEach(([name, value]) => {
+    handlers.push({
+      type,
+      query: `[${dataAttr}]`,
+      attr: attrName,
+      data: { name, value },
+      remove: false,
+    });
+  });
+
+  handlers[handlers.length - 1].remove = true;
+
+  return { str: dataAttr, handlers };
+}
+
+const generateHandlerAll = (obj) =>
+  pipe(
+    obj,
+    Object.entries,
+    (items) => items.map((args) => generateHandler(...args)),
+    reduceHandlerArray
+  );
+
+// parser
+const parse = (val, handlers = []) => {
+  if (isArray(val)) {
+    // Will be parsed as an array of object { str, handlers }
+    // And will be reduced to a single { str, handlers }
+    const final = reduceHandlerArray(val.map((item) => parse(item, handlers)));
+
+    return {
+      str: final.str.join(' '),
+      handlers: [...handlers, ...final.handlers].flat(),
+    };
+  }
+
+  if (isTemplate(val)) {
+    // Just add its string and handlers
+    return {
+      str: val.str,
+      handlers: [...handlers, ...val.handlers],
+    };
+  }
+
+  if (isObject(val)) {
+    const { state, ...otherTypes } = batchSameTypes(val);
+
+    // Will be parsed to { str: [], handlers: [] }
+    const a = generateHandlerAll(otherTypes);
+    const b = state ? generateStateHandler(state) : { str: [], handlers: [] };
+
+    return {
+      str: [...a.str, ...b.str].join(' '),
+      handlers: [...handlers, ...a.handlers, ...b.handlers].flat(),
+    };
+  }
+
+  return {
+    handlers,
+    str: `${val}`,
+  };
+};
+
+const addPlaceholders = (str) => {
+  const placeholderRegex = /{%\s*(.*)\s*%}/;
+  let newString = str;
+  let match = newString.match(placeholderRegex);
+
+  while (match) {
+    newString = newString.replace(
+      match[0],
+      `<!-- placeholder-${match[1].trim()} -->`
+    );
+
+    match = newString.slice(match.index).match(placeholderRegex);
+  }
+
+  return newString;
+};
+
+const parseString = (fragments, ...values) => {
+  const result = reduceHandlerArray(values.map((value) => parse(value)));
+
+  const htmlString = addPlaceholders(
+    result.str.reduce(
+      (acc, str, i) => `${acc}${str}${fragments[i + 1]}`,
+      fragments[0]
+    )
+  );
+
+  return new Template(htmlString, result.handlers.flat());
+};
+
+function modifyElement({ query, type, data, context = document }) {
+  const node = context.querySelector(query);
+
+  if (!node) {
+    console.error(`Can't find node using selector ${query}`);
+    return;
+  }
+
+  switch (type) {
+    case 'prop':
+      node[data.name] = data.value;
+      break;
+    case 'attr':
+      if (isBooleanAttribute(data.name)) {
+        if (data.value) {
+          node.setAttribute(data.name, '');
+        } else {
+          node.removeAttribute(data.name);
+        }
+      } else {
+        node.setAttribute(data.name, data.value);
+      }
+
+      break;
+    case 'listener':
+      node.addEventListener(data.name, data.value);
+      break;
+    case 'style':
+      node.style[data.name] = data.value;
+      break;
+    case 'children':
+      [...node.children].map((child) => child.remove());
+
+      if (isArray(data.value)) {
+        node.append(...data.value.map(reduceNode));
+      } else {
+        node.append(reduceNode(data.value));
+      }
+
+      break;
+    default:
+      throw new Error('Invalid type.');
+  }
+}
+
+// Taken from https://stackoverflow.com/questions/13363946/how-do-i-get-an-html-comment-with-javascript
+function replacePlaceholderComments(root) {
+  // Fourth argument, which is actually obsolete according to the DOM4 standard, is required in IE 11
+  const iterator = document.createNodeIterator(
+    root,
+    NodeFilter.SHOW_COMMENT,
+    () => NodeFilter.FILTER_ACCEPT,
+    false
+  );
+
+  let current = iterator.nextNode();
+  while (current) {
+    const isPlaceholder = current.nodeValue.trim().startsWith('placeholder-');
+
+    if (isPlaceholder) {
+      current.replaceWith(
+        document.createTextNode(
+          current.nodeValue.trim().replace('placeholder-', '')
+        )
+      );
+    }
+
+    current = iterator.nextNode();
+  }
+}
+
+function createElementFromString(str, handlers = []) {
+  const fragment = document.createRange().createContextualFragment(str);
+
+  handlers.forEach((handler) => {
+    const el = fragment.querySelector(handler.query);
+
+    modifyElement({
+      query: handler.query,
+      type: handler.type,
+      data: handler.data,
+      context: fragment,
+    });
+
+    if (handler.remove) {
+      el.removeAttribute(handler.attr);
+    }
+  });
+
+  // Replace all placeholder comments
+  [...fragment.children].forEach(replacePlaceholderComments);
+
+  return fragment;
+}
+
+function render(template) {
+  return createElementFromString(...Object.values(template));
+}
+
+// State
+const StateStore = new WeakMap();
+
+function generateStateHandler(state = {}) {
+  const id = uniqid();
+  const proxyId = `data-proxyid="${id}"`;
+  const batchedObj = {};
+
+  Object.entries(state).forEach(([type, batch]) => {
+    Object.entries(batch).forEach(([key, info]) => {
+      const bindedElements = StateStore.get(info[REF]);
+      const existingHandlers = bindedElements.get(id) || [];
+
+      const finalValue = reduceValue(info.data.value, info.data.trap);
+
+      if (!batchedObj[type]) {
+        batchedObj[type] = {};
+      }
+
+      batchedObj[type][key] = finalValue;
+
+      bindedElements.set(id, [
+        ...existingHandlers,
+        {
+          type,
+          target: key,
+          prop: info.data.prop,
+          trap: info.data.trap,
+        },
+      ]);
+    });
+  });
+
+  const { str, handlers } = generateHandlerAll(batchedObj);
+
+  return { handlers, str: [...str, proxyId] };
+}
+
+const setter = (ref) => (target, prop, value, receiver) => {
+  const bindedElements = StateStore.get(ref);
+
+  bindedElements.forEach((handlers, id) => {
+    const query = `[data-proxyid="${id}"]`;
+    const el = document.querySelector(query);
+
+    if (el) {
+      handlers.forEach((handler) => {
+        if (prop !== handler.prop) return;
+
+        const finalValue = reduceValue(value, handler.trap);
+
+        modifyElement({
+          query,
+          type: handler.type,
+          data: { name: handler.target, value: finalValue },
+        });
+      });
+    } else {
+      // delete handler when the target is unreachable (most likely deleted)
+      bindedElements.delete(id);
+    }
+  });
+
+  return Reflect.set(target, prop, value, receiver);
+};
+
+const _bind =
+  (ref, prop, value) =>
+  (trap = null) => ({
+    [REF]: ref,
+    data: {
+      prop,
+      trap,
+      value,
+    },
+  });
+
+const getter = (ref) => (target, rawProp, receiver) => {
+  const [prop, type] = determineType(rawProp);
+
+  if (type === 'state' && prop in target) {
+    return Object.assign(
+      _bind(ref, prop, target[prop]),
+      _bind(ref, prop, target[prop])()
+    );
+  }
+
+  return Reflect.get(target, prop, receiver);
+};
+
+const createState = (value, seal = true) => {
+  const obj = isObject(value) ? value : { value };
+  StateStore.set(obj, new Map());
+
+  const { proxy, revoke } = Proxy.revocable(seal ? Object.seal(obj) : obj, {
+    get: getter(obj),
+    set: setter(obj),
+  });
+
+  // To make sure state gets deleted from memory
+  const _deleteState = () => {
+    revoke();
+    StateStore.delete(obj);
+
+    return obj;
+  };
+
+  return [proxy, _deleteState];
+};
+
+
+
+
+/***/ }),
+
 /***/ "./src/App.js":
 /*!********************!*\
   !*** ./src/App.js ***!
@@ -12,7 +460,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
-/* harmony import */ var _component__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./component */ "./src/component.js");
+/* harmony import */ var poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! poor-man-jsx */ "./node_modules/poor-man-jsx/index.js");
 /* harmony import */ var _pages__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./pages */ "./src/pages/index.js");
 /* harmony import */ var _Router__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./Router */ "./src/Router.js");
 
@@ -42,14 +490,14 @@ const routes = [
   },
 ];
 
-const App = () => _component__WEBPACK_IMPORTED_MODULE_0__.html`
+const App = () => poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
   <header class="header">
     <span class="header__brand title">My Restaurant</span>
     <nav class="header__nav nav">
       <ul class="nav__menu">
         ${routes.map(
           (route) =>
-            _component__WEBPACK_IMPORTED_MODULE_0__.html`
+            poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
               <li class="nav__item">
                 <a class="nav__link link" href="#${route.path}">
                   ${route.name}
@@ -81,14 +529,14 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
-/* harmony import */ var _component__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./component */ "./src/component.js");
+/* harmony import */ var poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! poor-man-jsx */ "./node_modules/poor-man-jsx/index.js");
 /* harmony import */ var _event__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./event */ "./src/event.js");
 
 
 
 // Will only render one component at a time
 const Router = (routes, error, className = '', tagName = 'div') => {
-  const currentLocation = (0,_component__WEBPACK_IMPORTED_MODULE_0__.createState)(
+  const [currentLocation] = (0,poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.createState)(
     window.location.hash.replace('#', '') || '/'
   );
 
@@ -106,419 +554,16 @@ const Router = (routes, error, className = '', tagName = 'div') => {
     return route.component.call(null);
   };
 
-  return _component__WEBPACK_IMPORTED_MODULE_0__.html`
+  return poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
     <${tagName} ${className && `class="${className}"`} 
     ${{
-      $content: currentLocation.bindValue(changeContent),
+      $children: currentLocation.$value(changeContent),
     }}>
     </${tagName}>
   `;
 };
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (Router);
-
-
-/***/ }),
-
-/***/ "./src/component.js":
-/*!**************************!*\
-  !*** ./src/component.js ***!
-  \**************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "html": () => (/* binding */ html),
-/* harmony export */   "render": () => (/* binding */ render),
-/* harmony export */   "createElementFromString": () => (/* binding */ createElementFromString),
-/* harmony export */   "createState": () => (/* binding */ createState)
-/* harmony export */ });
-const uuid = (length = 12) => Math.random().toString(36).substr(2, length);
-
-const stateStore = new Map();
-const defaultProps = ['textContent', 'innerHTML', 'outerHTML', 'innerText'];
-const booleanAttributes = [
-  'checked',
-  'selected',
-  'disabled',
-  'readonly',
-  'multiple',
-  'ismap',
-  'noresize',
-  'reversed',
-  'autocomplete',
-];
-
-const isObject = (val) => typeof val === 'object';
-const isArray = (val) => Array.isArray(val);
-const isTemplate = (val) => val._type && val._type === 'template';
-const isEventListeners = (val) =>
-  isObject(val) && Object.keys(val).every((key) => key.startsWith('on'));
-const isState = (val) =>
-  isObject(val) && Object.keys(val).every((key) => key.startsWith('$'));
-const isBooleanAttribute = (val) => booleanAttributes.includes(val);
-const isStyleAttribute = (str) => str.startsWith('$style:');
-const isDefaultProps = (val) =>
-  isObject(val) && Object.keys(val).every((key) => defaultProps.includes(key));
-
-const _handlerTypeReducer = (str) => {
-  let type;
-  if (defaultProps.includes(str.replace('$', ''))) {
-    type = 'prop';
-  } else if (isStyleAttribute(str)) {
-    type = 'style';
-  } else if (str.replace('$', '') === 'content') {
-    type = 'content';
-  } else {
-    type = 'attr';
-  }
-
-  return type;
-};
-
-const _handlerValueReducer = (type, obj) => {
-  switch (type) {
-    case 'listener':
-      return {
-        name: obj[0].replace('on', '').toLowerCase(),
-        value: obj[1],
-      };
-    case 'prop':
-      return {
-        name: obj[0].replace('$', ''),
-        value: obj[1],
-      };
-    case 'attr':
-      return {
-        name: obj[0].replace('$', ''),
-        value: obj[1],
-      };
-    case 'style':
-      return {
-        name: obj[0],
-        value: obj[1],
-      };
-    case 'text':
-      return {
-        value: obj[1],
-      };
-    case 'content':
-      return {
-        value: obj[1],
-      };
-    default:
-      throw new Error('Invalid handler type.');
-  }
-};
-
-const _generateHandler = (type, obj) => {
-  const arr = [];
-  const id = uuid();
-  const attrName = `data-${type}-id`;
-  const dataAttr = `${attrName}="${id}"`;
-
-  Object.entries(obj).forEach((item) => {
-    arr.push({
-      type,
-      query: `[${dataAttr}]`,
-      data: _handlerValueReducer(type, item),
-      attr: attrName,
-      remove: false,
-    });
-  });
-
-  arr[arr.length - 1].remove = true;
-
-  return [arr, dataAttr];
-};
-
-const _bindState = (state) => {
-  const id = uuid();
-  const proxyId = `data-proxy-id="${id}"`;
-  const handlers = {};
-
-  Object.entries(state).forEach(([key, handler]) => {
-    const bindedElements = stateStore.get(handler._id);
-    const existingHandlers = bindedElements.get(id) || [];
-
-    const finalValue = handler.trap
-      ? handler.trap.call(null, handler.value)
-      : handler.value;
-    const target = key.replace('$style:', '').replace('$', '');
-    const type = _handlerTypeReducer(key);
-
-    // Store the new handlers
-    bindedElements.set(id, [
-      ...existingHandlers,
-      {
-        type,
-        target,
-        propName: handler.propName,
-        trap: handler.trap,
-      },
-    ]);
-
-    if (!handlers[type]) {
-      handlers[type] = {};
-    }
-
-    handlers[type][target] = finalValue;
-  });
-
-  const [allHandlers, str] = Object.entries(handlers)
-    .map(([type, obj]) => _generateHandler(type, obj))
-    .reduce(
-      (prev, current) => [
-        [...prev[0], ...current[0]],
-        [...prev[1], current[1]],
-      ],
-      [[], []]
-    );
-
-  return [allHandlers, `${proxyId} ${str.join(' ')}`];
-};
-
-// return value is [str, array]
-const _parser = (expr, handlers = []) => {
-  // if expr is array, map and parse each item
-  // items must be all strings after parsing
-  if (isArray(expr)) {
-    const [strArray, handlersArray] = expr
-      .map((item) => _parser(item, handlers))
-      .reduce(
-        (prev, current) => [
-          [...prev[0], current[0]],
-          [...prev[1], ...current[1]],
-        ],
-        [[], []]
-      );
-
-    return [strArray.join(''), handlersArray];
-  }
-
-  // if template
-  // add its handlers to ours
-  // then return the string
-  if (isTemplate(expr)) {
-    return [expr[0], [...handlers, ...expr[1]]];
-  }
-
-  // if Object and that object contains only keys which name is an event
-  // generate a temporary id and replace the object with it
-  // then add the event listeners to our handlers
-  if (isEventListeners(expr)) {
-    const [eventHandlers, id] = _generateHandler('listener', expr);
-
-    return [id, [...handlers, ...eventHandlers]];
-  }
-
-  if (isState(expr)) {
-    const [propHandlers, id] = _bindState(expr);
-    return [id, [...handlers, ...propHandlers]];
-  }
-
-  if (isDefaultProps(expr)) {
-    const [defaultPropHandlers, id] = _generateHandler('prop', expr);
-    return [id, [...handlers, ...defaultPropHandlers]];
-  }
-
-  // if none of our accepted types, assume it is string
-  // then just return it
-  return [`${expr}`, []];
-};
-
-const _createTemplate = (arr) => {
-  const arrayLikeObj = {};
-
-  arr.forEach((i, idx) => {
-    arrayLikeObj[idx] = arr[idx];
-  });
-
-  arrayLikeObj.length = arr.length;
-  arrayLikeObj._type = 'template';
-
-  Object.defineProperty(arrayLikeObj, '_type', {
-    enumerable: false,
-  });
-
-  return arrayLikeObj;
-};
-
-const _replacePlaceholders = (str) => {
-  let newString = str;
-  let match = newString.match(/{%\s*(.*)\s*%}/);
-  const handlers = [];
-
-  while (match) {
-    const [textHandlers, id] = _generateHandler('text', {
-      text: match[1].trim(),
-    });
-
-    handlers.push(...textHandlers);
-
-    newString = newString.replace(match[0], `<i ${id}></i>`);
-
-    match = newString.slice(match.index).match(/{%\s*(.*)\s*%}/);
-  }
-
-  return [newString, handlers];
-};
-
-const parseString = (strings, ...exprs) => {
-  const [evaluatedExprs, handlers] = exprs
-    .map((expr) => _parser(expr))
-    .reduce(
-      (prev, current) => [
-        [...prev[0], current[0]],
-        [...prev[1], ...current[1]],
-      ],
-      [[], []]
-    );
-
-  const htmlString = evaluatedExprs.reduce(
-    (fullString, expr, i) => `${fullString}${expr}${strings[i + 1]}`,
-    strings[0]
-  );
-
-  const [sanitizedString, textHandlers] = _replacePlaceholders(htmlString);
-  handlers.push(...textHandlers);
-
-  return _createTemplate([sanitizedString, handlers]);
-};
-
-const html = (strings, ...exprs) => parseString(strings, ...exprs);
-
-const _modifyElement = ({ element, type, data, context = document }) => {
-  const el = context.querySelector(element);
-
-  switch (type) {
-    case 'prop':
-      el[data.name] = data.value;
-      break;
-    case 'attr':
-      if (isBooleanAttribute(data.name)) {
-        if (data.value) {
-          el.setAttribute(data.name, '');
-        } else {
-          el.removeAttribute(data.name);
-        }
-      } else {
-        el.setAttribute(data.name, data.value);
-      }
-
-      break;
-    case 'listener':
-      el.addEventListener(data.name, data.value);
-      break;
-    case 'text':
-      el.replaceWith(document.createTextNode(data.value));
-      break;
-    case 'style':
-      el.style[data.name] = data.value;
-      break;
-    case 'content':
-      [...el.children].map((child) => child.remove());
-
-      el.appendChild(
-        data.value instanceof HTMLElement
-          ? data.value
-          : render(html`${data.value}`)
-      );
-
-      break;
-    default:
-      throw new Error('Invalid type.');
-  }
-};
-
-const createElementFromString = (str, handlers = []) => {
-  const createdElement = document.createRange().createContextualFragment(str);
-
-  handlers.forEach((handler) => {
-    const el = createdElement.querySelector(handler.query);
-
-    if (!el) return;
-
-    _modifyElement({
-      element: handler.query,
-      type: handler.type,
-      data: handler.data,
-      context: createdElement,
-    });
-
-    if (handler.remove) {
-      el.removeAttribute(handler.attr);
-    }
-  });
-
-  return createdElement;
-};
-
-const render = (template) => createElementFromString(...Array.from(template));
-
-const _setHandler = (stateId) => ({
-  set: (target, prop, value, receiver) => {
-    const bindedElements = stateStore.get(stateId);
-
-    bindedElements.forEach((handlers, id) => {
-      const query = `[data-proxy-id="${id}"]`;
-      const el = document.querySelector(query);
-
-      if (el) {
-        handlers.forEach((handler) => {
-          if (prop !== handler.propName) return;
-
-          const finalValue = handler.trap
-            ? handler.trap.call(null, value)
-            : value;
-
-          _modifyElement({
-            element: query,
-            type: handler.type,
-            data: { name: handler.target, value: finalValue },
-          });
-        });
-      } else {
-        // delete handler when the target is unreachable (most likely deleted)
-        bindedElements.delete(id);
-      }
-    });
-
-    return Reflect.set(target, prop, value, receiver);
-  },
-});
-
-const createState = (initValue = null) => {
-  const _id = uuid();
-  // Map contains id keys
-  // id keys are proxy ids of elements binded to the state
-  stateStore.set(_id, new Map());
-
-  const state = {
-    bindValue: (trap = null) => ({
-      propName: 'value',
-      trap,
-      _id,
-      value: state.value,
-    }),
-    bind: (propName = 'value', trap = null) => ({
-      propName,
-      trap,
-      _id,
-      value: propName === 'value' ? state.value : state.value[propName],
-    }),
-  };
-
-  if (isObject(initValue)) {
-    state.value = new Proxy(initValue, _setHandler(_id));
-  } else {
-    state.value = initValue;
-  }
-
-  return new Proxy(state, _setHandler(_id));
-};
-
-
 
 
 /***/ }),
@@ -533,11 +578,11 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
-/* harmony import */ var _component__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../component */ "./src/component.js");
+/* harmony import */ var poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! poor-man-jsx */ "./node_modules/poor-man-jsx/index.js");
 
 
 const Card = () =>
-  _component__WEBPACK_IMPORTED_MODULE_0__.html`<div class="card">
+  poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`<div class="card">
     <img
       class="card__img"
       src="./assets/images/placeholder.png"
@@ -625,11 +670,11 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
-/* harmony import */ var _component__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../component */ "./src/component.js");
+/* harmony import */ var poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! poor-man-jsx */ "./node_modules/poor-man-jsx/index.js");
 
 
 const About = () =>
-  _component__WEBPACK_IMPORTED_MODULE_0__.html`<h1 class="title title--centered">This is my About</h1>
+  poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`<h1 class="title title--centered">This is my About</h1>
     <p>
       Lorem ipsum dolor sit amet consectetur, adipisicing elit. Exercitationem
       id numquam inventore porro animi quia repellat nisi eum voluptatibus
@@ -661,12 +706,12 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
-/* harmony import */ var _component__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../component */ "./src/component.js");
+/* harmony import */ var poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! poor-man-jsx */ "./node_modules/poor-man-jsx/index.js");
 /* harmony import */ var _event__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../event */ "./src/event.js");
 
 
 
-const Contact = () => _component__WEBPACK_IMPORTED_MODULE_0__.html`<h1 class="title title--centered">Message us</h1>
+const Contact = () => poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`<h1 class="title title--centered">Message us</h1>
   <form
     class="form"
     ${{
@@ -727,11 +772,11 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
-/* harmony import */ var _component__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../component */ "./src/component.js");
+/* harmony import */ var poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! poor-man-jsx */ "./node_modules/poor-man-jsx/index.js");
 
 
 const Error = () =>
-  _component__WEBPACK_IMPORTED_MODULE_0__.html`
+  poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
     <div class="error">
       <h1 class="error__message">Page not found</h1>
       <p class="link error__link" ${{ onClick: () => window.history.back() }}>
@@ -755,10 +800,10 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
-/* harmony import */ var _component__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../component */ "./src/component.js");
+/* harmony import */ var poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! poor-man-jsx */ "./node_modules/poor-man-jsx/index.js");
 
 
-const Home = () => _component__WEBPACK_IMPORTED_MODULE_0__.html`
+const Home = () => poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
   <div class="banner">
     <div class="banner__column-l">
       <h1 class="banner__title title">Welcome to our Restaurant</h1>
@@ -797,18 +842,18 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
-/* harmony import */ var _component__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../component */ "./src/component.js");
+/* harmony import */ var poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! poor-man-jsx */ "./node_modules/poor-man-jsx/index.js");
 /* harmony import */ var _components_Card__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../components/Card */ "./src/components/Card.js");
 
 
 
 const Menu = () =>
-  _component__WEBPACK_IMPORTED_MODULE_0__.html`
+  poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
     <aside class="sidenav">
       <ul class="nav__menu sidenav__menu">
         ${new Array(5).fill('Category').map(
           (str, i) =>
-            _component__WEBPACK_IMPORTED_MODULE_0__.html`<li class="nav__item sidenav__item">
+            poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`<li class="nav__item sidenav__item">
               <a class="link sidenav__link" href="#/">${str} ${i + 1}</a>
             </li>`
         )}
@@ -919,7 +964,7 @@ var __webpack_exports__ = {};
   \**********************/
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _App__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./App */ "./src/App.js");
-/* harmony import */ var _component__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./component */ "./src/component.js");
+/* harmony import */ var poor_man_jsx__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! poor-man-jsx */ "./node_modules/poor-man-jsx/index.js");
 /* harmony import */ var _event__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./event */ "./src/event.js");
 
 
@@ -942,7 +987,7 @@ window.addEventListener('beforeunload', (e) => {
   }
 });
 
-document.body.prepend((0,_component__WEBPACK_IMPORTED_MODULE_1__.render)((0,_App__WEBPACK_IMPORTED_MODULE_0__.default)()));
+document.body.prepend((0,poor_man_jsx__WEBPACK_IMPORTED_MODULE_1__.render)((0,_App__WEBPACK_IMPORTED_MODULE_0__.default)()));
 
 })();
 

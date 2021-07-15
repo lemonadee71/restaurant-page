@@ -1,4 +1,4 @@
-import { html } from '../component';
+import { html } from 'poor-man-jsx';
 
 const Home = () => html`
   <div class="banner">

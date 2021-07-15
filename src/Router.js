@@ -1,9 +1,9 @@
-import { html, createState } from './component';
+import { html, createState } from 'poor-man-jsx';
 import event from './event';
 
 // Will only render one component at a time
 const Router = (routes, error, className = '', tagName = 'div') => {
-  const currentLocation = createState(
+  const [currentLocation] = createState(
     window.location.hash.replace('#', '') || '/'
   );
 
@@ -24,7 +24,7 @@ const Router = (routes, error, className = '', tagName = 'div') => {
   return html`
     <${tagName} ${className && `class="${className}"`} 
     ${{
-      $content: currentLocation.bindValue(changeContent),
+      $children: currentLocation.$value(changeContent),
     }}>
     </${tagName}>
   `;

@@ -1,4 +1,4 @@
-import { html } from '../component';
+import { html } from 'poor-man-jsx';
 import event from '../event';
 
 const Contact = () => html`<h1 class="title title--centered">Message us</h1>

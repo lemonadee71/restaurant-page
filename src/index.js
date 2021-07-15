@@ -1,5 +1,5 @@
 import App from './App';
-import { render } from './component';
+import { render } from 'poor-man-jsx';
 import event from './event';
 
 let formHasValue = false;
