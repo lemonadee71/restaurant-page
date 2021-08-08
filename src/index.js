@@ -19,4 +19,4 @@ window.addEventListener('beforeunload', (e) => {
   }
 });
 
-document.body.prepend(render(App()));
+render(App(), document.body);
