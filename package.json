@@ -1,19 +1,22 @@
 {
   "name": "restaurant-page",
   "version": "1.0.0",
-  "description": "",
+  "description": "A dummy restaurant page. Project for the The Odin Project.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "webpack",
-    "watch": "webpack --watch"
+    "serve": "npx webpack serve --hot"
   },
   "keywords": [],
-  "author": "",
+  "author": "Shin Andrei Riego",
   "license": "ISC",
   "dependencies": {
-    "poor-man-jsx": "^1.0.1",
+    "poor-man-jsx": "^1.0.1"
+  },
+  "devDependencies": {
     "webpack": "^5.38.1",
-    "webpack-cli": "^4.7.0"
+    "webpack-cli": "^4.7.0",
+    "webpack-dev-server": "^4.0.0"
   }
 }

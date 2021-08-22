@@ -1,7 +1,8 @@
 import { html } from 'poor-man-jsx';
 
 const About = () =>
-  html`<h1 class="title title--centered">This is my About</h1>
+  html`
+    <h1 class="title title--centered">This is my About</h1>
     <p>
       Lorem ipsum dolor sit amet consectetur, adipisicing elit. Exercitationem
       id numquam inventore porro animi quia repellat nisi eum voluptatibus
@@ -16,6 +17,7 @@ const About = () =>
       voluptatum deserunt ullam quibusdam expedita ratione iure nesciunt,
       accusantium dolorum? Lorem ipsum dolor sit amet consectetur adipisicing
       elit. Deleniti cupiditate saepe mollitia est asperiores beatae.
-    </p>`;
+    </p>
+  `;
 
 export default About;

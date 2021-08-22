@@ -1,7 +1,8 @@
 import { html } from 'poor-man-jsx';
 import event from '../event';
 
-const Contact = () => html`<h1 class="title title--centered">Message us</h1>
+const Contact = () => html`
+  <h1 class="title title--centered">Message us</h1>
   <form
     class="form"
     ${{
@@ -45,6 +46,7 @@ const Contact = () => html`<h1 class="title title--centered">Message us</h1>
       required
     ></textarea>
     <button class="form__submit" type="submit">Send</button>
-  </form>`;
+  </form>
+`;
 
 export default Contact;

@@ -14,7 +14,7 @@ const routes = [
     component: pages.Menu,
   },
   {
-    path: 'about',
+    path: '/about',
     name: 'About Us',
     component: pages.About,
   },
