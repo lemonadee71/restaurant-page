@@ -15,7 +15,7 @@ const getParams = (path, exact = true) => {
   return [pattern, paramNames];
 };
 
-const getParamValues = (path, paramNames) => {
+const getParamValues = (path, pattern, paramNames) => {
   const paramValues = (path.match(pattern) || []).slice(1);
 
   return paramValues.reduce((data, current, i) => {

@@ -26,8 +26,8 @@ const History = (() => {
         state,
       };
 
-      if (params.length) {
-        payload.params = getParamValues(path, paramNames);
+      if (paramNames.length) {
+        payload.params = getParamValues(path, pattern, paramNames);
       }
 
       fn.call(null, payload);
@@ -68,7 +68,7 @@ const History = (() => {
     sync();
   };
 
-  // window.addEventListener('popstate', sync);
+  window.addEventListener('popstate', sync);
 
   return {
     back,

@@ -7,21 +7,26 @@ const routes = [
   {
     path: '/',
     name: 'Home',
+    title: 'My Restaurant',
     component: pages.Home,
   },
   {
     path: '/menu',
     name: 'Menu',
+    title: 'My Restaurant | Menu',
+    exact: false,
     component: pages.Menu,
   },
   {
     path: '/about',
-    name: 'About Us',
+    name: 'About',
+    title: 'My Restaurant | About Us',
     component: pages.About,
   },
   {
     path: '/contact',
     name: 'Contact',
+    title: 'My Restaurant | Contact',
     component: pages.Contact,
   },
 ];

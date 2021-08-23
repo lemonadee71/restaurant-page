@@ -10,7 +10,7 @@ const Router = (routes, error, className = '', tagName = 'div') => {
     component: [],
   });
 
-  const allRoutes = routes.map((route) => {
+  const _routes = routes.map((route) => {
     const [pattern, params] = getParams(route.path, route.exact);
     return { ...route, path: pattern, params };
   });
@@ -21,8 +21,7 @@ const Router = (routes, error, className = '', tagName = 'div') => {
       current.path === path
     )
       return;
-
-    const route = allRoutes.find((route) => route.path.exec(path));
+    const route = _routes.find((route) => route.path.exec(path));
 
     if (route && route.component) {
       const payload = {
@@ -31,7 +30,11 @@ const Router = (routes, error, className = '', tagName = 'div') => {
       };
 
       if (route.params.length) {
-        payload.params = getParamValues(path, paramNames);
+        payload.params = getParamValues(path, route.path, route.params);
+      }
+
+      if (route.title) {
+        document.title = route.title;
       }
 
       current.component = route.component.call(null, payload);
@@ -39,7 +42,7 @@ const Router = (routes, error, className = '', tagName = 'div') => {
       current.component = error.call();
     }
 
-    current.isExact = route?.exact || true;
+    current.isExact = route?.exact ?? true;
     current.path = path;
   };
 
