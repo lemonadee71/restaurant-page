@@ -11,18 +11,18 @@
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "settings": () => (/* binding */ settings),
-/* harmony export */   "html": () => (/* binding */ parseString),
+/* harmony export */   "html": () => (/* binding */ html),
 /* harmony export */   "createElementFromString": () => (/* binding */ createElementFromString),
 /* harmony export */   "render": () => (/* binding */ render),
-/* harmony export */   "createState": () => (/* binding */ createState)
+/* harmony export */   "createState": () => (/* binding */ createState),
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
-// This is to hide the ref property an invoked state returns
-// which is a reference to the original object
-// to make sure we won't be able to access it outside of its intended use
-const REF = Symbol('ref');
-
-// classes
 class Template {
+  /**
+   * Create a template
+   * @param {String} str - an html string
+   * @param {Array} handlers - an array of handlers
+   */
   constructor(str, handlers) {
     this.str = str;
     this.handlers = handlers;
@@ -48,30 +48,35 @@ const booleanAttributes = [
   'reversed',
   'autocomplete',
 ];
+const lifecycleMethods = ['create', 'destroy', 'mount', 'unmount'];
 
-const settings = {
-  addDefaultProp: (...prop) => defaultProps.push(...prop),
-  addBooleanAttr: (...attr) => booleanAttributes.push(...attr),
-};
+/**
+ * Is functions used for type checking
+ */
+const isObject = (value) => typeof value === 'object';
 
-// is functions
-const isObject = (val) => typeof val === 'object';
+const isArray = (value) => Array.isArray(value);
 
-const isArray = (val) => Array.isArray(val);
+const isTemplate = (value) => value instanceof Template;
 
-const isTemplate = (val) => val instanceof Template;
+const isNode = (value) => value instanceof Node;
 
 const isState = (key) => key.startsWith('$');
+
+const isLifecycleMethod = (key) => key.startsWith('@');
 
 const isEventListener = (key) => key.toLowerCase().startsWith('on');
 
 const isDefaultProp = (key) => defaultProps.includes(key);
 
-const isStyleAttribute = (key) => key in mockEl.style;
+const isStyleAttribute = (key) =>
+  key in mockEl.style || key.startsWith('style_');
 
 const isBooleanAttribute = (attr) => booleanAttributes.includes(attr);
 
-// utils
+/**
+ * Utility functions
+ */
 const uniqid = (length = 8) => Math.random().toString(36).substr(2, length);
 
 const pipe = (args, ...fns) =>
@@ -92,6 +97,15 @@ const reduceHandlerArray = (arr) =>
     { str: [], handlers: [] }
   );
 
+const generateAttribute = (type) => {
+  const id = uniqid();
+  const seed = uniqid(4);
+  const attrName = `data-${type}-${seed}`;
+  const dataAttr = `${attrName}="${id}"`;
+
+  return [dataAttr, attrName];
+};
+
 const determineType = (key) => {
   // Any unrecognizable key will be treated as attr
   let type = 'attr';
@@ -107,13 +121,19 @@ const determineType = (key) => {
     type = 'style';
   } else if (key === 'children') {
     type = 'children';
+  } else if (isLifecycleMethod(key)) {
+    if (!lifecycleMethods.includes(key.replace('@', ''))) {
+      throw new Error(`${key} is not a lifecycle method`);
+    }
+
+    type = 'lifecycle';
   }
 
   if (type === 'listener') {
     k = key.toLowerCase();
   }
 
-  return [k.replace(/^(\$|on)/gi, ''), type];
+  return [k.replace(/^(\$|@|on|style_)/gi, ''), type];
 };
 
 const batchSameTypes = (obj) => {
@@ -136,17 +156,14 @@ const batchSameTypes = (obj) => {
   return batched;
 };
 
-function generateHandler(type, obj) {
-  const id = uniqid();
-  const seed = uniqid(4);
-  const attrName = `data-${type}-${seed}`;
-  const dataAttr = `${attrName}="${id}"`;
+const generateHandler = (type, obj) => {
+  const [dataAttr, attrName] = generateAttribute(type);
   const handlers = [];
 
   Object.entries(obj).forEach(([name, value]) => {
     handlers.push({
       type,
-      query: `[${dataAttr}]`,
+      selector: `[${dataAttr}]`,
       attr: attrName,
       data: { name, value },
       remove: false,
@@ -156,53 +173,144 @@ function generateHandler(type, obj) {
   handlers[handlers.length - 1].remove = true;
 
   return { str: dataAttr, handlers };
-}
+};
 
 const generateHandlerAll = (obj) =>
   pipe(
-    obj,
-    Object.entries,
+    Object.entries(obj),
     (items) => items.map((args) => generateHandler(...args)),
     reduceHandlerArray
   );
 
-// parser
-const parse = (val, handlers = []) => {
-  if (isArray(val)) {
+/**
+ * Lifecycle
+ */
+const generateLifecycleHandler = (obj) => {
+  const str = [];
+  const handlers = [];
+
+  Object.entries(obj).forEach(([type, fn]) => {
+    const [dataAttr, attrName] = generateAttribute(type);
+
+    str.push(dataAttr);
+    handlers.push({
+      type,
+      fn,
+      selector: `[${dataAttr}]`,
+      attr: attrName,
+      remove: true,
+    });
+  });
+
+  return { str, handlers };
+};
+
+const LIFECYCLE_SYMBOLS = {
+  destroy: Symbol('@destroy'),
+  mount: Symbol('@mount'),
+  unmount: Symbol('@unmount'),
+};
+const config = { childList: true, subtree: true };
+
+const traverseNode = (node, callback) => {
+  callback.call(null, node);
+
+  if (node.children && node.children.length) {
+    [...node.children].forEach((child) => traverseNode(child, callback));
+  }
+};
+
+const mutationCallback = (mutations) => {
+  mutations.forEach((mutation) => {
+    if (mutation.type === 'childList') {
+      mutation.addedNodes.forEach((node) => {
+        traverseNode(node, (n) => {
+          const cb = n[LIFECYCLE_SYMBOLS.mount];
+
+          if (cb) cb.call(n);
+        });
+      });
+
+      mutation.removedNodes.forEach((node) => {
+        if (!document.body.contains(node)) {
+          traverseNode(node, (n) => {
+            const cb = n[LIFECYCLE_SYMBOLS.destroy];
+
+            if (cb) cb.call(n);
+          });
+        }
+
+        traverseNode(node, (n) => {
+          const cb = n[LIFECYCLE_SYMBOLS.unmount];
+
+          if (cb) cb.call(n);
+        });
+      });
+    }
+  });
+};
+
+const observer = new MutationObserver(mutationCallback);
+observer.observe(document.body, config);
+
+/**
+ * The parser
+ * @param {*} value
+ * @param {Array} handlers
+ * @returns
+ */
+const parse = (value, handlers = []) => {
+  if (isNode(value)) {
+    const id = uniqid();
+
+    return {
+      str: `<marker id="node-${id}" />`,
+      handlers: [
+        ...handlers.flat(),
+        { type: 'node', selector: `#node-${id}`, data: { value } },
+      ],
+    };
+  }
+
+  if (isTemplate(value)) {
+    // Just add its string and handlers
+    return {
+      str: value.str,
+      handlers: [...handlers, ...value.handlers],
+    };
+  }
+
+  if (isArray(value)) {
     // Will be parsed as an array of object { str, handlers }
     // And will be reduced to a single { str, handlers }
-    const final = reduceHandlerArray(val.map((item) => parse(item, handlers)));
+    const final = reduceHandlerArray(
+      value.map((item) => parse(item, handlers))
+    );
 
     return {
       str: final.str.join(' '),
-      handlers: [...handlers, ...final.handlers].flat(),
+      handlers: [handlers, final.handlers].flat(2),
     };
   }
 
-  if (isTemplate(val)) {
-    // Just add its string and handlers
-    return {
-      str: val.str,
-      handlers: [...handlers, ...val.handlers],
-    };
-  }
-
-  if (isObject(val)) {
-    const { state, ...otherTypes } = batchSameTypes(val);
+  if (isObject(value)) {
+    const { state, lifecycle, ...otherTypes } = batchSameTypes(value);
+    const blank = { str: [], handlers: [] };
 
     // Will be parsed to { str: [], handlers: [] }
     const a = generateHandlerAll(otherTypes);
-    const b = state ? generateStateHandler(state) : { str: [], handlers: [] };
+    const b = state ? generateStateHandler(state) : blank;
+    const c = lifecycle ? generateLifecycleHandler(lifecycle) : blank;
 
     return {
-      str: [...a.str, ...b.str].join(' '),
-      handlers: [...handlers, ...a.handlers, ...b.handlers].flat(),
+      str: [...a.str, ...b.str, ...c.str].join(' '),
+      handlers: [handlers, a.handlers, b.handlers, c.handlers].flat(2),
     };
   }
 
   return {
     handlers,
-    str: `${val}`,
+    str: `${value}`,
   };
 };
 
@@ -223,24 +331,40 @@ const addPlaceholders = (str) => {
   return newString;
 };
 
-const parseString = (fragments, ...values) => {
+/**
+ * Creates a `Template` from a template literal. Must be used as a tag.
+ * @param {Array.<String>} fragments
+ * @param  {...(String|Object|Array|Template)} values
+ * @returns {Template}
+ */
+const html = (fragments, ...values) => {
   const result = reduceHandlerArray(values.map((value) => parse(value)));
 
-  const htmlString = addPlaceholders(
+  const htmlString = pipe(
     result.str.reduce(
       (acc, str, i) => `${acc}${str}${fragments[i + 1]}`,
       fragments[0]
-    )
+    ),
+    addPlaceholders
   );
 
   return new Template(htmlString, result.handlers.flat());
 };
 
-function modifyElement({ query, type, data, context = document }) {
-  const node = context.querySelector(query);
+/**
+ * Hydrate helpers
+ */
+const removeChildren = (parent) => {
+  while (parent.firstChild) {
+    parent.removeChild(parent.lastChild);
+  }
+};
+
+const modifyElement = (selector, type, data, context = document) => {
+  const node = context.querySelector(selector);
 
   if (!node) {
-    console.error(`Can't find node using selector ${query}`);
+    console.error(`Can't find node using selector ${selector}`);
     return;
   }
 
@@ -266,79 +390,212 @@ function modifyElement({ query, type, data, context = document }) {
     case 'style':
       node.style[data.name] = data.value;
       break;
-    case 'children':
-      [...node.children].map((child) => child.remove());
+    case 'children': {
+      removeChildren(node);
+
+      const fragment = document.createDocumentFragment();
 
       if (isArray(data.value)) {
-        node.append(...data.value.map(reduceNode));
+        fragment.append(...data.value.map(reduceNode));
       } else {
-        node.append(reduceNode(data.value));
+        fragment.append(reduceNode(data.value));
       }
 
+      node.append(fragment);
+
+      break;
+    }
+    case 'node':
+      node.replaceWith(data.value);
       break;
     default:
       throw new Error('Invalid type.');
   }
-}
+};
 
-// Taken from https://stackoverflow.com/questions/13363946/how-do-i-get-an-html-comment-with-javascript
-function replacePlaceholderComments(root) {
-  // Fourth argument, which is actually obsolete according to the DOM4 standard, is required in IE 11
+const replacePlaceholderComments = (root) => {
   const iterator = document.createNodeIterator(
     root,
     NodeFilter.SHOW_COMMENT,
-    () => NodeFilter.FILTER_ACCEPT,
-    false
+    () => NodeFilter.FILTER_ACCEPT
   );
 
-  let current = iterator.nextNode();
-  while (current) {
-    const isPlaceholder = current.nodeValue.trim().startsWith('placeholder-');
+  let current;
+  // eslint-disable-next-line
+  while ((current = iterator.nextNode())) {
+    const text = current.nodeValue.trim();
+    const isPlaceholder = text.startsWith('placeholder-');
 
     if (isPlaceholder) {
       current.replaceWith(
-        document.createTextNode(
-          current.nodeValue.trim().replace('placeholder-', '')
-        )
+        document.createTextNode(text.replace('placeholder-', ''))
       );
     }
-
-    current = iterator.nextNode();
   }
-}
+};
 
-function createElementFromString(str, handlers = []) {
-  const fragment = document.createRange().createContextualFragment(str);
+const createHydrateFn =
+  (handlers = []) =>
+  (context) =>
+    handlers.forEach((handler) => {
+      const el = context.querySelector(handler.selector);
 
-  handlers.forEach((handler) => {
-    const el = fragment.querySelector(handler.query);
+      switch (handler.type) {
+        case 'create':
+          handler.fn.call(el);
+          break;
+        case 'destroy':
+        case 'mount':
+        case 'unmount':
+          el[LIFECYCLE_SYMBOLS[handler.type]] = handler.fn;
+          break;
+        default:
+          modifyElement(handler.selector, handler.type, handler.data, context);
+          break;
+      }
 
-    modifyElement({
-      query: handler.query,
-      type: handler.type,
-      data: handler.data,
-      context: fragment,
+      if (handler.remove) {
+        el.removeAttribute(handler.attr);
+      }
     });
 
-    if (handler.remove) {
-      el.removeAttribute(handler.attr);
-    }
-  });
+/**
+ * Creates an element from string with `createContextualFragment`
+ * @param {String} str - the html string to be rendered
+ * @param {Array} handlers - array of handlers
+ * @returns {DocumentFragment}
+ */
+function createElementFromString(str, handlers = []) {
+  const fragment = document.createRange().createContextualFragment(str);
+  const [createHandlers, otherHandlers] = handlers.reduce(
+    (acc, current) => {
+      if (current.type === 'create') acc[0].push(current);
+      else acc[1].push(current);
 
-  // Replace all placeholder comments
+      return acc;
+    },
+    [[], []]
+  );
+
+  createHydrateFn(otherHandlers)(fragment);
   [...fragment.children].forEach(replacePlaceholderComments);
+
+  createHydrateFn(createHandlers)(fragment);
 
   return fragment;
 }
 
-function render(template) {
-  return createElementFromString(...Object.values(template));
-}
+/**
+ * Creates element from a `Template` and appends it to `element` if provided.
+ * If element is not provided, it'll return the created document fragment.
+ * Otherwise, it'll return the `element`
+ * @param {Template} template - a `Template` returned by `html`
+ * @param {String|HTMLElement} element - the element to append to
+ * @returns
+ */
+const render = (template, element) => {
+  const fragment = createElementFromString(...Object.values(template));
 
-// State
+  if (element) {
+    const parent =
+      typeof element === 'string' ? document.querySelector(element) : element;
+
+    parent.append(fragment);
+
+    /** @type {HTMLElement} */
+    return parent;
+  }
+
+  /** @type {DocumentFragment} */
+  return fragment;
+};
+
+/**
+ * State
+ */
 const StateStore = new WeakMap();
 
-function generateStateHandler(state = {}) {
+// This is to hide the ref property an invoked state returns
+// which is a reference to the original object
+// to make sure we won't be able to access it outside of its intended use
+const REF = Symbol('ref');
+
+/**
+ * Creates a state
+ * @param {any} value - the initial value of state
+ * @param {Boolean} [seal=true] - seal the object with Object.seal
+ * @returns {[Object, function]}
+ */
+const createState = (value, seal = true) => {
+  const obj = isObject(value) ? value : { value };
+  StateStore.set(obj, new Map());
+
+  const { proxy, revoke } = Proxy.revocable(seal ? Object.seal(obj) : obj, {
+    get: getter(obj),
+    set: setter(obj),
+  });
+
+  /**
+   * Delete the state and returns the original value
+   * @returns {any}
+   */
+  const deleteState = () => {
+    revoke();
+    StateStore.delete(obj);
+
+    return value;
+  };
+
+  return [proxy, deleteState];
+};
+
+const getter = (ref) => (target, rawProp, receiver) => {
+  const [prop, type] = determineType(rawProp);
+
+  const $ =
+    (value) =>
+    (trap = null) => ({
+      [REF]: ref,
+      data: {
+        prop,
+        trap,
+        value,
+      },
+    });
+
+  if (type === 'state' && prop in target) {
+    return Object.assign($(target[prop]), $(target[prop])());
+  }
+
+  return Reflect.get(target, prop, receiver);
+};
+
+const setter = (ref) => (target, prop, value, receiver) => {
+  const bindedElements = StateStore.get(ref);
+
+  bindedElements.forEach((handlers, id) => {
+    const selector = `[data-proxyid="${id}"]`;
+    const el = document.querySelector(selector);
+
+    if (el) {
+      handlers.forEach((handler) => {
+        if (prop !== handler.prop) return;
+
+        modifyElement(selector, handler.type, {
+          name: handler.target,
+          value: reduceValue(value, handler.trap),
+        });
+      });
+    } else {
+      // delete handler when the target is unreachable (most likely deleted)
+      bindedElements.delete(id);
+    }
+  });
+
+  return Reflect.set(target, prop, value, receiver);
+};
+
+const generateStateHandler = (state = {}) => {
   const id = uniqid();
   const proxyId = `data-proxyid="${id}"`;
   const batchedObj = {};
@@ -348,13 +605,11 @@ function generateStateHandler(state = {}) {
       const bindedElements = StateStore.get(info[REF]);
       const existingHandlers = bindedElements.get(id) || [];
 
-      const finalValue = reduceValue(info.data.value, info.data.trap);
-
       if (!batchedObj[type]) {
         batchedObj[type] = {};
       }
 
-      batchedObj[type][key] = finalValue;
+      batchedObj[type][key] = reduceValue(info.data.value, info.data.trap);
 
       bindedElements.set(id, [
         ...existingHandlers,
@@ -371,81 +626,41 @@ function generateStateHandler(state = {}) {
   const { str, handlers } = generateHandlerAll(batchedObj);
 
   return { handlers, str: [...str, proxyId] };
-}
-
-const setter = (ref) => (target, prop, value, receiver) => {
-  const bindedElements = StateStore.get(ref);
-
-  bindedElements.forEach((handlers, id) => {
-    const query = `[data-proxyid="${id}"]`;
-    const el = document.querySelector(query);
-
-    if (el) {
-      handlers.forEach((handler) => {
-        if (prop !== handler.prop) return;
-
-        const finalValue = reduceValue(value, handler.trap);
-
-        modifyElement({
-          query,
-          type: handler.type,
-          data: { name: handler.target, value: finalValue },
-        });
-      });
-    } else {
-      // delete handler when the target is unreachable (most likely deleted)
-      bindedElements.delete(id);
-    }
-  });
-
-  return Reflect.set(target, prop, value, receiver);
 };
 
-const _bind =
-  (ref, prop, value) =>
-  (trap = null) => ({
-    [REF]: ref,
-    data: {
-      prop,
-      trap,
-      value,
-    },
-  });
+/**
+ * Settings
+ */
 
-const getter = (ref) => (target, rawProp, receiver) => {
-  const [prop, type] = determineType(rawProp);
+/**
+ * Add a defaul property (anything that can be called directly from the element)
+ * @param  {...string} prop - the default prop that will be added
+ * @returns
+ */
+const addDefaultProp = (...prop) => defaultProps.push(...prop);
 
-  if (type === 'state' && prop in target) {
-    return Object.assign(
-      _bind(ref, prop, target[prop]),
-      _bind(ref, prop, target[prop])()
-    );
-  }
+/**
+ * Add a boolean attribute to the list.
+ * @param  {...string} attr - the boolean attribute to be added
+ * @returns
+ */
+const addBooleanAttr = (...attr) => booleanAttributes.push(...attr);
 
-  return Reflect.get(target, prop, receiver);
-};
+/**
+ * Disconnect the MutationObserver. This will stop watching for added/removed nodes.
+ * This means that `@mount`, `@unmount`, and `@destroy` will no longer work.
+ * @returns
+ */
+const disableObserver = () => observer.disconnect();
 
-const createState = (value, seal = true) => {
-  const obj = isObject(value) ? value : { value };
-  StateStore.set(obj, new Map());
-
-  const { proxy, revoke } = Proxy.revocable(seal ? Object.seal(obj) : obj, {
-    get: getter(obj),
-    set: setter(obj),
-  });
-
-  // To make sure state gets deleted from memory
-  const _deleteState = () => {
-    revoke();
-    StateStore.delete(obj);
-
-    return obj;
-  };
-
-  return [proxy, _deleteState];
+const settings = {
+  addDefaultProp,
+  addBooleanAttr,
+  disableObserver,
 };
 
 
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (settings);
 
 
 /***/ }),
@@ -461,8 +676,10 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 /* harmony import */ var poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! poor-man-jsx */ "./node_modules/poor-man-jsx/index.js");
-/* harmony import */ var _pages__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./pages */ "./src/pages/index.js");
+/* harmony import */ var _history__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./history */ "./src/history.js");
 /* harmony import */ var _Router__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./Router */ "./src/Router.js");
+/* harmony import */ var _pages__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./pages */ "./src/pages/index.js");
+
 
 
 
@@ -471,22 +688,27 @@ const routes = [
   {
     path: '/',
     name: 'Home',
-    component: _pages__WEBPACK_IMPORTED_MODULE_1__.Home,
+    title: 'My Restaurant',
+    component: _pages__WEBPACK_IMPORTED_MODULE_3__.Home,
   },
   {
     path: '/menu',
     name: 'Menu',
-    component: _pages__WEBPACK_IMPORTED_MODULE_1__.Menu,
+    title: 'My Restaurant | Menu',
+    exact: false,
+    component: _pages__WEBPACK_IMPORTED_MODULE_3__.Menu,
   },
   {
-    path: 'about',
-    name: 'About Us',
-    component: _pages__WEBPACK_IMPORTED_MODULE_1__.About,
+    path: '/about',
+    name: 'About',
+    title: 'My Restaurant | About Us',
+    component: _pages__WEBPACK_IMPORTED_MODULE_3__.About,
   },
   {
     path: '/contact',
     name: 'Contact',
-    component: _pages__WEBPACK_IMPORTED_MODULE_1__.Contact,
+    title: 'My Restaurant | Contact',
+    component: _pages__WEBPACK_IMPORTED_MODULE_3__.Contact,
   },
 ];
 
@@ -499,7 +721,10 @@ const App = () => poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
           (route) =>
             poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
               <li class="nav__item">
-                <a class="nav__link link" href="#${route.path}">
+                <a
+                  class="nav__link link"
+                  ${{ onClick: () => _history__WEBPACK_IMPORTED_MODULE_1__.default.push(route.path) }}
+                >
                   ${route.name}
                 </a>
               </li>
@@ -508,7 +733,7 @@ const App = () => poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
       </ul>
     </nav>
   </header>
-  ${(0,_Router__WEBPACK_IMPORTED_MODULE_2__.default)(routes, _pages__WEBPACK_IMPORTED_MODULE_1__.Error, 'container', 'main')}
+  ${(0,_Router__WEBPACK_IMPORTED_MODULE_2__.default)(routes, _pages__WEBPACK_IMPORTED_MODULE_3__.Error, 'container', 'main')}
   <footer class="footer">
     <div class="footer__links"></div>
   </footer>
@@ -530,34 +755,67 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 /* harmony import */ var poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! poor-man-jsx */ "./node_modules/poor-man-jsx/index.js");
-/* harmony import */ var _event__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./event */ "./src/event.js");
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./utils */ "./src/utils.js");
+/* harmony import */ var _history__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./history */ "./src/history.js");
+
 
 
 
 // Will only render one component at a time
 const Router = (routes, error, className = '', tagName = 'div') => {
-  const [currentLocation] = (0,poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.createState)(
-    window.location.hash.replace('#', '') || '/'
-  );
-
-  _event__WEBPACK_IMPORTED_MODULE_1__.default.on('hashchange', (path) => {
-    currentLocation.value = path;
+  const [current, revoke] = (0,poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.createState)({
+    path: '',
+    isExact: true,
+    component: [],
   });
 
-  const changeContent = (path) => {
-    const route = routes.find((route) => route.path === path);
+  const _routes = routes.map((route) => {
+    const [pattern, params] = (0,_utils__WEBPACK_IMPORTED_MODULE_1__.getParams)(route.path, route.exact);
+    return { ...route, path: pattern, params };
+  });
 
-    if (!route || !route.component) {
-      return error.call(null);
+  const changeContent = (path, state) => {
+    if (
+      (!current.isExact && path.startsWith(current.path)) ||
+      current.path === path
+    )
+      return;
+    const route = _routes.find((route) => route.path.exec(path));
+
+    if (route && route.component) {
+      const payload = {
+        path,
+        state,
+      };
+
+      if (route.params.length) {
+        payload.params = (0,_utils__WEBPACK_IMPORTED_MODULE_1__.getParamValues)(path, route.path, route.params);
+      }
+
+      if (route.title) {
+        document.title = route.title;
+      }
+
+      current.component = route.component.call(null, payload);
+    } else {
+      current.component = error.call();
     }
 
-    return route.component.call(null);
+    current.isExact = route?.exact ?? true;
+    current.path = path;
   };
 
   return poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
     <${tagName} ${className && `class="${className}"`} 
     ${{
-      $children: currentLocation.$value(changeContent),
+      '@mount': () =>
+        changeContent(window.location.pathname, window.history.state),
+      '@create': () => _history__WEBPACK_IMPORTED_MODULE_2__.default.onPopState(changeContent),
+      '@destroy': () => {
+        revoke();
+        _history__WEBPACK_IMPORTED_MODULE_2__.default.off(changeContent);
+      },
+      $children: current.$component,
     }}>
     </${tagName}>
   `;
@@ -581,25 +839,136 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! poor-man-jsx */ "./node_modules/poor-man-jsx/index.js");
 
 
-const Card = () =>
-  poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`<div class="card">
-    <img
-      class="card__img"
-      src="./assets/images/placeholder.png"
-      alt="placeholder"
-    />
-    <div class="card__body">
-      <h1 class="title card__title">This is a card</h1>
-      <p class="card__text">
-        Lorem ipsum dolor sit amet consectetur adipisicing elit. Tempore
-        officiis mollitia obcaecati officia repellat dolores.
-      </p>
-      <hr />
-      <p class="card__subtext">Lorem ipsum dolor sit amet.</p>
+const Card = (id) =>
+  poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
+    <div class="card">
+      <img
+        class="card__img"
+        src="https://via.placeholder.com/200"
+        alt="placeholder"
+      />
+      <div class="card__body">
+        <h1 class="title card__title">This is card #${id}</h1>
+        <p class="card__text">
+          Lorem ipsum dolor sit amet consectetur adipisicing elit. Tempore
+          officiis mollitia obcaecati officia repellat dolores.
+        </p>
+        <hr />
+        <p class="card__subtext">Lorem ipsum dolor sit amet.</p>
+      </div>
     </div>
-  </div>`;
+  `;
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (Card);
+
+
+/***/ }),
+
+/***/ "./src/components/Category.js":
+/*!************************************!*\
+  !*** ./src/components/Category.js ***!
+  \************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! poor-man-jsx */ "./node_modules/poor-man-jsx/index.js");
+/* harmony import */ var _Card__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./Card */ "./src/components/Card.js");
+
+
+
+const Category = ({ params }) => {
+  const length = 5;
+  const lowerLimit = params.id * length - length + 1;
+
+  return poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
+    ${new Array(length).fill().map((_, i) => (0,_Card__WEBPACK_IMPORTED_MODULE_1__.default)(lowerLimit + i))}
+  `;
+};
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (Category);
+
+
+/***/ }),
+
+/***/ "./src/emitter.js":
+/*!************************!*\
+  !*** ./src/emitter.js ***!
+  \************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+const VALUES = {
+  first: -999,
+  last: 999,
+};
+
+class EventEmitter {
+  constructor() {
+    this.events = [];
+  }
+
+  on(name, fn, options = {}) {
+    this.events.push({ name, fn, options });
+  }
+
+  once(name, fn, options = {}) {
+    this.on(name, fn, { ...options, once: true });
+  }
+
+  off(name, fn) {
+    this.events = this.events.filter((event) => {
+      if (event.name.toString() === name.toString() && event.fn === fn)
+        return false;
+      return true;
+    });
+  }
+
+  delete(name) {
+    this.events = this.events.filter(
+      (event) => event.name.toString() !== name.toString()
+    );
+  }
+
+  clear() {
+    this.events = [];
+  }
+
+  emit(name, ...payload) {
+    this.events
+      .filter((event) =>
+        event.name instanceof RegExp
+          ? event.name.test(name)
+          : event.name === name
+      )
+      .sort((a, b) => {
+        const x = a.options.order;
+        const y = b.options.order;
+        const aValue = Number.isInteger(x) ? x : VALUES[x] || 0;
+        const bValue = Number.isInteger(y) ? y : VALUES[y] || 0;
+
+        return aValue - bValue;
+      })
+      .forEach((handler) => {
+        try {
+          const result = handler.fn.apply(handler.options.context, payload);
+
+          if (result) this.emit(`${name}.success`, result);
+          if (handler.options.once) this.off(name, handler.fn);
+        } catch (e) {
+          console.error(e);
+          this.emit(`${name}.error`, e);
+        }
+      });
+  }
+}
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (EventEmitter);
 
 
 /***/ }),
@@ -614,48 +983,112 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
-class EventEmitter {
-  constructor() {
-    this.events = new Map();
-  }
+/* harmony import */ var _emitter__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./emitter */ "./src/emitter.js");
 
-  on(eventName, fn, options) {
-    if (!this.events.has(eventName)) {
-      this.events.set(eventName, []);
-    }
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (new _emitter__WEBPACK_IMPORTED_MODULE_0__.default());
 
-    this.events.get(eventName).push({ fn, options });
-  }
 
-  off(eventName, fn) {
-    let handlers = this.events.get(eventName);
-    handlers = handlers.filter((handler) => handler.fn !== fn);
+/***/ }),
 
-    console.log(`Shutting off ${eventName}...`);
-    this.events.set(eventName, handlers);
-  }
+/***/ "./src/history.js":
+/*!************************!*\
+  !*** ./src/history.js ***!
+  \************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
-  clear() {
-    this.events.clear();
-  }
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _emitter__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./emitter */ "./src/emitter.js");
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./utils */ "./src/utils.js");
 
-  emit(eventName, payload = null) {
-    console.log(`${eventName} event emitted... `);
-    const handlers = this.events.get(eventName) || [];
 
-    handlers.forEach((handler) => {
-      handler.fn.call(null, payload);
 
-      if (handler.options && handler.options.once) {
-        this.off(eventName, handler.fn);
+const History = (() => {
+  const $ = new _emitter__WEBPACK_IMPORTED_MODULE_0__.default();
+  const cache = new Map();
+  const history = window.history;
+
+  const sync = () => {
+    $.emit('popstate', window.location.pathname, history.state);
+  };
+
+  const onPopState = (fn, options) => {
+    $.on('popstate', fn, options);
+  };
+
+  const onChangeToPath = (path, fn, options) => {
+    const order = path.split('/').length - 1;
+    const [pattern, paramNames] = (0,_utils__WEBPACK_IMPORTED_MODULE_1__.getParams)(path);
+
+    const cb = (path, state) => {
+      if (!pattern.exec(path)) return;
+
+      const payload = {
+        path,
+        state,
+      };
+
+      if (paramNames.length) {
+        payload.params = (0,_utils__WEBPACK_IMPORTED_MODULE_1__.getParamValues)(path, pattern, paramNames);
       }
-    });
-  }
-}
 
-const event = new EventEmitter();
+      fn.call(null, payload);
+    };
 
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (event);
+    cache.set(fn, cb);
+    $.on('popstate', cb, { ...options, order });
+  };
+
+  const off = (fn) => {
+    $.off('popstate', cache.get(fn) || fn);
+  };
+
+  const clear = () => $.clear();
+
+  const push = (path, state) => {
+    history.pushState(state, null, path);
+    sync();
+  };
+
+  const replace = (path, state) => {
+    history.replaceState(state, null, path);
+    sync();
+  };
+
+  const forward = () => {
+    history.forward();
+    sync();
+  };
+
+  const back = () => {
+    history.back();
+    sync();
+  };
+
+  const go = (n = 0) => {
+    history.go(n);
+    sync();
+  };
+
+  window.addEventListener('popstate', sync);
+
+  return {
+    back,
+    clear,
+    forward,
+    go,
+    push,
+    replace,
+    off,
+    onChangeToPath,
+    onPopState,
+    sync,
+  };
+})();
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (History);
 
 
 /***/ }),
@@ -674,7 +1107,8 @@ __webpack_require__.r(__webpack_exports__);
 
 
 const About = () =>
-  poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`<h1 class="title title--centered">This is my About</h1>
+  poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
+    <h1 class="title title--centered">This is my About</h1>
     <p>
       Lorem ipsum dolor sit amet consectetur, adipisicing elit. Exercitationem
       id numquam inventore porro animi quia repellat nisi eum voluptatibus
@@ -689,7 +1123,8 @@ const About = () =>
       voluptatum deserunt ullam quibusdam expedita ratione iure nesciunt,
       accusantium dolorum? Lorem ipsum dolor sit amet consectetur adipisicing
       elit. Deleniti cupiditate saepe mollitia est asperiores beatae.
-    </p>`;
+    </p>
+  `;
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (About);
 
@@ -711,7 +1146,8 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-const Contact = () => poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`<h1 class="title title--centered">Message us</h1>
+const Contact = () => poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
+  <h1 class="title title--centered">Message us</h1>
   <form
     class="form"
     ${{
@@ -755,7 +1191,8 @@ const Contact = () => poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`<h1 class="
       required
     ></textarea>
     <button class="form__submit" type="submit">Send</button>
-  </form>`;
+  </form>
+`;
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (Contact);
 
@@ -773,13 +1210,15 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 /* harmony import */ var poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! poor-man-jsx */ "./node_modules/poor-man-jsx/index.js");
+/* harmony import */ var _history__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../history */ "./src/history.js");
+
 
 
 const Error = () =>
   poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
     <div class="error">
       <h1 class="error__message">Page not found</h1>
-      <p class="link error__link" ${{ onClick: () => window.history.back() }}>
+      <p class="link error__link" ${{ onClick: () => _history__WEBPACK_IMPORTED_MODULE_1__.default.back() }}>
         Go back
       </p>
     </div>
@@ -801,6 +1240,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 /* harmony import */ var poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! poor-man-jsx */ "./node_modules/poor-man-jsx/index.js");
+/* harmony import */ var _history__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../history */ "./src/history.js");
+
 
 
 const Home = () => poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
@@ -814,7 +1255,12 @@ const Home = () => poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
       </p>
       <div class="banner__btns">
         <button class="banner__btn">Order now</button>
-        <a class="banner__link link" href="#/menu">See menu</a>
+        <a
+          class="banner__link link"
+          ${{ onClick: () => _history__WEBPACK_IMPORTED_MODULE_1__.default.push('/menu') }}
+        >
+          See menu
+        </a>
       </div>
     </div>
     <div class="banner__column-r">
@@ -843,27 +1289,80 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 /* harmony import */ var poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! poor-man-jsx */ "./node_modules/poor-man-jsx/index.js");
-/* harmony import */ var _components_Card__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../components/Card */ "./src/components/Card.js");
+/* harmony import */ var _components_Category__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../components/Category */ "./src/components/Category.js");
+/* harmony import */ var _history__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../history */ "./src/history.js");
+/* harmony import */ var _Router__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../Router */ "./src/Router.js");
+/* harmony import */ var _Error__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./Error */ "./src/pages/Error.js");
 
 
 
-const Menu = () =>
-  poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
+
+
+
+const Menu = () => {
+  let self;
+
+  const changeToDefaultTitle = () => {
+    self.textContent = 'Category';
+  };
+
+  const changeCategoryTitle = ({ params }) => {
+    self.textContent = `Category ${params.name}`;
+  };
+
+  return poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
     <aside class="sidenav">
       <ul class="nav__menu sidenav__menu">
         ${new Array(5).fill('Category').map(
           (str, i) =>
-            poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`<li class="nav__item sidenav__item">
-              <a class="link sidenav__link" href="#/">${str} ${i + 1}</a>
-            </li>`
+            poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
+              <li class="nav__item sidenav__item">
+                <a
+                  class="link sidenav__link"
+                  ${{ onClick: () => _history__WEBPACK_IMPORTED_MODULE_2__.default.push(`/menu/${i + 1}`) }}
+                >
+                  {% ${str} ${i + 1} %}
+                </a>
+              </li>
+            `
         )}
       </ul>
     </aside>
     <section class="menu">
-      <h1 class="title">Category title</h1>
-      ${new Array(10).fill((0,_components_Card__WEBPACK_IMPORTED_MODULE_1__.default)())}
+      <h1
+        class="title"
+        ${{
+          '@mount': function () {
+            self = this;
+
+            _history__WEBPACK_IMPORTED_MODULE_2__.default.onChangeToPath('/menu', changeToDefaultTitle);
+            _history__WEBPACK_IMPORTED_MODULE_2__.default.onChangeToPath('/menu/:name', changeCategoryTitle);
+          },
+          '@unmount': () => {
+            _history__WEBPACK_IMPORTED_MODULE_2__.default.off(changeToDefaultTitle);
+            _history__WEBPACK_IMPORTED_MODULE_2__.default.off(changeCategoryTitle);
+          },
+        }}
+      >
+        Category
+      </h1>
+      ${(0,_Router__WEBPACK_IMPORTED_MODULE_3__.default)(
+        [
+          {
+            path: '/menu/:id',
+            component: _components_Category__WEBPACK_IMPORTED_MODULE_1__.default,
+          },
+          {
+            path: '/menu',
+            component: () =>
+              'This is a nested route. Choose a category from sidebar for a demo.',
+          },
+        ],
+        _Error__WEBPACK_IMPORTED_MODULE_4__.default
+      )}
     </section>
   `;
+};
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (Menu);
 
@@ -894,6 +1393,49 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
+
+
+
+/***/ }),
+
+/***/ "./src/utils.js":
+/*!**********************!*\
+  !*** ./src/utils.js ***!
+  \**********************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "getParams": () => (/* binding */ getParams),
+/* harmony export */   "getParamValues": () => (/* binding */ getParamValues)
+/* harmony export */ });
+const getParams = (path, exact = true) => {
+  const defaultParamPattern = '(\\w+)';
+
+  const paramNames = (path.match(/:\w+/g) || []).map((param) =>
+    param.replace(':', '')
+  );
+  const base = paramNames.length
+    ? paramNames.reduce(
+        (str, name) => str.replace(':' + name, defaultParamPattern),
+        path
+      )
+    : path;
+  const pattern = new RegExp(exact ? `^${base}$` : base);
+
+  return [pattern, paramNames];
+};
+
+const getParamValues = (path, pattern, paramNames) => {
+  const paramValues = (path.match(pattern) || []).slice(1);
+
+  return paramValues.reduce((data, current, i) => {
+    data[paramNames[i]] = current;
+
+    return data;
+  }, {});
+};
 
 
 
@@ -963,9 +1505,11 @@ var __webpack_exports__ = {};
   !*** ./src/index.js ***!
   \**********************/
 __webpack_require__.r(__webpack_exports__);
-/* harmony import */ var _App__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./App */ "./src/App.js");
-/* harmony import */ var poor_man_jsx__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! poor-man-jsx */ "./node_modules/poor-man-jsx/index.js");
+/* harmony import */ var poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! poor-man-jsx */ "./node_modules/poor-man-jsx/index.js");
+/* harmony import */ var _App__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./App */ "./src/App.js");
 /* harmony import */ var _event__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./event */ "./src/event.js");
+/* harmony import */ var _history__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./history */ "./src/history.js");
+
 
 
 
@@ -976,18 +1520,14 @@ _event__WEBPACK_IMPORTED_MODULE_2__.default.on('form input', (hasInput) => {
   formHasValue = hasInput;
 });
 
-window.addEventListener('hashchange', () => {
-  _event__WEBPACK_IMPORTED_MODULE_2__.default.emit('hashchange', window.location.hash.replace('#', ''));
-});
-
 window.addEventListener('beforeunload', (e) => {
-  if (formHasValue && window.location.hash.replace('#', '') === '/contact') {
+  if (formHasValue && window.location.pathname === '/contact') {
     e.preventDefault();
     e.returnValue = '';
   }
 });
 
-document.body.prepend((0,poor_man_jsx__WEBPACK_IMPORTED_MODULE_1__.render)((0,_App__WEBPACK_IMPORTED_MODULE_0__.default)()));
+(0,poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.render)((0,_App__WEBPACK_IMPORTED_MODULE_1__.default)(), document.body);
 
 })();
 
