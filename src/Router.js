@@ -16,31 +16,38 @@ const Router = (routes, error, className = '', tagName = 'div') => {
   });
 
   const changeContent = (path, state) => {
-    if (!current.isExact && path.startsWith(current.path)) return;
+    if (
+      (!current.isExact && path.startsWith(current.path)) ||
+      current.path === path
+    )
+      return;
 
     const route = allRoutes.find((route) => route.path.exec(path));
 
-    if (!route || !route.component) {
+    if (route && route.component) {
+      const payload = {
+        path,
+        state,
+      };
+
+      if (route.params.length) {
+        payload.params = getParamValues(path, paramNames);
+      }
+
+      current.component = route.component.call(null, payload);
+    } else {
       current.component = error.call();
     }
 
-    const payload = {
-      path,
-      state,
-    };
-
-    if (route.params.length) {
-      payload.params = getParamValues(path, paramNames);
-    }
-
-    current.component = route.component.call(null, payload);
-    current.isExact = route.exact || true;
+    current.isExact = route?.exact || true;
     current.path = path;
   };
 
   return html`
     <${tagName} ${className && `class="${className}"`} 
     ${{
+      '@mount': () =>
+        changeContent(window.location.pathname, window.history.state),
       '@create': () => History.onPopState(changeContent),
       '@destroy': () => {
         revoke();

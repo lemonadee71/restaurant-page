@@ -1,4 +1,5 @@
 import { html } from 'poor-man-jsx';
+import History from '../history';
 
 const Home = () => html`
   <div class="banner">
@@ -11,7 +12,12 @@ const Home = () => html`
       </p>
       <div class="banner__btns">
         <button class="banner__btn">Order now</button>
-        <a class="banner__link link" href="#/menu">See menu</a>
+        <a
+          class="banner__link link"
+          ${{ onClick: () => History.push('/menu') }}
+        >
+          See menu
+        </a>
       </div>
     </div>
     <div class="banner__column-r">

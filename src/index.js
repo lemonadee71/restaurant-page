@@ -16,5 +16,4 @@ window.addEventListener('beforeunload', (e) => {
   }
 });
 
-window.addEventListener('DOMContentLoaded', () => History.push('/'));
 render(App(), document.body);

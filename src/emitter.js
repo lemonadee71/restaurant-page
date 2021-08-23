@@ -56,6 +56,7 @@ class EventEmitter {
           if (result) this.emit(`${name}.success`, result);
           if (handler.options.once) this.off(name, handler.fn);
         } catch (e) {
+          console.error(e);
           this.emit(`${name}.error`, e);
         }
       });
