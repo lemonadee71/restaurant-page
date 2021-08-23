@@ -1,6 +1,7 @@
 import { html } from 'poor-man-jsx';
-import * as pages from './pages';
+import History from './history';
 import Router from './Router';
+import * as pages from './pages';
 
 const routes = [
   {
@@ -34,7 +35,10 @@ const App = () => html`
           (route) =>
             html`
               <li class="nav__item">
-                <a class="nav__link link" href="#${route.path}">
+                <a
+                  class="nav__link link"
+                  ${{ onClick: () => History.push(route.path) }}
+                >
                   ${route.name}
                 </a>
               </li>

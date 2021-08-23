@@ -1,30 +1,52 @@
 import { html, createState } from 'poor-man-jsx';
-import event from './event';
+import { getParams, getParamValues } from './utils';
+import History from './history';
 
 // Will only render one component at a time
 const Router = (routes, error, className = '', tagName = 'div') => {
-  const [currentLocation] = createState(
-    window.location.hash.replace('#', '') || '/'
-  );
-
-  event.on('hashchange', (path) => {
-    currentLocation.value = path;
+  const [current, revoke] = createState({
+    path: '',
+    isExact: true,
+    component: [],
   });
 
-  const changeContent = (path) => {
-    const route = routes.find((route) => route.path === path);
+  const allRoutes = routes.map((route) => {
+    const [pattern, params] = getParams(route.path, route.exact);
+    return { ...route, path: pattern, params };
+  });
+
+  const changeContent = (path, state) => {
+    if (!current.isExact && path.startsWith(current.path)) return;
+
+    const route = allRoutes.find((route) => route.path.exec(path));
 
     if (!route || !route.component) {
-      return error.call(null);
+      current.component = error.call();
     }
 
-    return route.component.call(null);
+    const payload = {
+      path,
+      state,
+    };
+
+    if (route.params.length) {
+      payload.params = getParamValues(path, paramNames);
+    }
+
+    current.component = route.component.call(null, payload);
+    current.isExact = route.exact || true;
+    current.path = path;
   };
 
   return html`
     <${tagName} ${className && `class="${className}"`} 
     ${{
-      $children: currentLocation.$value(changeContent),
+      '@create': () => History.onPopState(changeContent),
+      '@destroy': () => {
+        revoke();
+        History.off(changeContent);
+      },
+      $children: current.$component,
     }}>
     </${tagName}>
   `;

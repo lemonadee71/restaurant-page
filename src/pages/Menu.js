@@ -9,7 +9,9 @@ const Menu = () =>
           (str, i) =>
             html`
               <li class="nav__item sidenav__item">
-                <a class="link sidenav__link" href="#/">${str} ${i + 1}</a>
+                <a class="link sidenav__link" href="#/">
+                  {% ${str} ${i + 1} %}
+                </a>
               </li>
             `
         )}
