@@ -1048,7 +1048,11 @@ const History = (() => {
   const clear = () => $.clear();
 
   const push = (path, state) => {
-    history.pushState(state, null, path);
+    if (window.location.includes('github')) {
+      history.pushState(state, null, '/restaurant-page' + path);
+    } else {
+      history.pushState(state, null, path);
+    }
     sync();
   };
 
