@@ -676,9 +676,11 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 /* harmony import */ var poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! poor-man-jsx */ "./node_modules/poor-man-jsx/index.js");
-/* harmony import */ var _history__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./history */ "./src/history.js");
-/* harmony import */ var _Router__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./Router */ "./src/Router.js");
-/* harmony import */ var _pages__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./pages */ "./src/pages/index.js");
+/* harmony import */ var _components_Router__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./components/Router */ "./src/components/Router.js");
+/* harmony import */ var _constants__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./constants */ "./src/constants.js");
+/* harmony import */ var _history__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./history */ "./src/history.js");
+/* harmony import */ var _pages__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./pages */ "./src/pages/index.js");
+
 
 
 
@@ -686,35 +688,35 @@ __webpack_require__.r(__webpack_exports__);
 
 const routes = [
   {
-    path: '/',
+    path: _constants__WEBPACK_IMPORTED_MODULE_2__.GH_PATH + '/',
     name: 'Home',
-    title: 'My Restaurant',
-    component: _pages__WEBPACK_IMPORTED_MODULE_3__.Home,
+    title: `${_constants__WEBPACK_IMPORTED_MODULE_2__.NAME}`,
+    component: _pages__WEBPACK_IMPORTED_MODULE_4__.Home,
   },
   {
-    path: '/menu',
+    path: _constants__WEBPACK_IMPORTED_MODULE_2__.GH_PATH + '/menu',
     name: 'Menu',
-    title: 'My Restaurant | Menu',
+    title: `${_constants__WEBPACK_IMPORTED_MODULE_2__.NAME} | Menu`,
     exact: false,
-    component: _pages__WEBPACK_IMPORTED_MODULE_3__.Menu,
+    component: _pages__WEBPACK_IMPORTED_MODULE_4__.Menu,
   },
   {
-    path: '/about',
+    path: _constants__WEBPACK_IMPORTED_MODULE_2__.GH_PATH + '/about',
     name: 'About',
-    title: 'My Restaurant | About Us',
-    component: _pages__WEBPACK_IMPORTED_MODULE_3__.About,
+    title: `${_constants__WEBPACK_IMPORTED_MODULE_2__.NAME} | About Us`,
+    component: _pages__WEBPACK_IMPORTED_MODULE_4__.About,
   },
   {
-    path: '/contact',
+    path: _constants__WEBPACK_IMPORTED_MODULE_2__.GH_PATH + '/contact',
     name: 'Contact',
-    title: 'My Restaurant | Contact',
-    component: _pages__WEBPACK_IMPORTED_MODULE_3__.Contact,
+    title: `${_constants__WEBPACK_IMPORTED_MODULE_2__.NAME} | Contact`,
+    component: _pages__WEBPACK_IMPORTED_MODULE_4__.Contact,
   },
 ];
 
 const App = () => poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
   <header class="header">
-    <span class="header__brand title">My Restaurant</span>
+    <span class="header__brand title">${_constants__WEBPACK_IMPORTED_MODULE_2__.NAME}</span>
     <nav class="header__nav nav">
       <ul class="nav__menu">
         ${routes.map(
@@ -723,7 +725,7 @@ const App = () => poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
               <li class="nav__item">
                 <a
                   class="nav__link link"
-                  ${{ onClick: () => _history__WEBPACK_IMPORTED_MODULE_1__.default.push(route.path) }}
+                  ${{ onClick: () => _history__WEBPACK_IMPORTED_MODULE_3__.default.push(route.path) }}
                 >
                   ${route.name}
                 </a>
@@ -733,7 +735,7 @@ const App = () => poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
       </ul>
     </nav>
   </header>
-  ${(0,_Router__WEBPACK_IMPORTED_MODULE_2__.default)(routes, _pages__WEBPACK_IMPORTED_MODULE_3__.Error, 'container', 'main')}
+  ${(0,_components_Router__WEBPACK_IMPORTED_MODULE_1__.default)(routes, _pages__WEBPACK_IMPORTED_MODULE_4__.Error, 'container', 'main')}
   <footer class="footer">
     <div class="footer__links"></div>
   </footer>
@@ -744,10 +746,10 @@ const App = () => poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
 
 /***/ }),
 
-/***/ "./src/Router.js":
-/*!***********************!*\
-  !*** ./src/Router.js ***!
-  \***********************/
+/***/ "./src/components/Card.js":
+/*!********************************!*\
+  !*** ./src/components/Card.js ***!
+  \********************************/
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 __webpack_require__.r(__webpack_exports__);
@@ -755,8 +757,75 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 /* harmony import */ var poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! poor-man-jsx */ "./node_modules/poor-man-jsx/index.js");
-/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./utils */ "./src/utils.js");
-/* harmony import */ var _history__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./history */ "./src/history.js");
+
+
+const Card = (id) =>
+  poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
+    <div class="card">
+      <img
+        class="card__img"
+        src="https://via.placeholder.com/200?text=A+picture+of+food"
+        alt="placeholder"
+      />
+      <div class="card__body">
+        <h1 class="title card__title">This is card #${id}</h1>
+        <p class="card__text">
+          Lorem ipsum dolor sit amet consectetur adipisicing elit. Tempore
+          officiis mollitia obcaecati officia repellat dolores.
+        </p>
+        <hr />
+        <p class="card__subtext">Lorem ipsum dolor sit amet.</p>
+      </div>
+    </div>
+  `;
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (Card);
+
+
+/***/ }),
+
+/***/ "./src/components/Category.js":
+/*!************************************!*\
+  !*** ./src/components/Category.js ***!
+  \************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! poor-man-jsx */ "./node_modules/poor-man-jsx/index.js");
+/* harmony import */ var _Card__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./Card */ "./src/components/Card.js");
+
+
+
+const Category = ({ params }) => {
+  const length = 5;
+  const lowerLimit = params.id * length - length + 1;
+
+  return poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
+    ${new Array(length).fill().map((_, i) => (0,_Card__WEBPACK_IMPORTED_MODULE_1__.default)(lowerLimit + i))}
+  `;
+};
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (Category);
+
+
+/***/ }),
+
+/***/ "./src/components/Router.js":
+/*!**********************************!*\
+  !*** ./src/components/Router.js ***!
+  \**********************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! poor-man-jsx */ "./node_modules/poor-man-jsx/index.js");
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils */ "./src/utils.js");
+/* harmony import */ var _history__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../history */ "./src/history.js");
 
 
 
@@ -826,69 +895,19 @@ const Router = (routes, error, className = '', tagName = 'div') => {
 
 /***/ }),
 
-/***/ "./src/components/Card.js":
-/*!********************************!*\
-  !*** ./src/components/Card.js ***!
-  \********************************/
+/***/ "./src/constants.js":
+/*!**************************!*\
+  !*** ./src/constants.js ***!
+  \**************************/
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */   "GH_PATH": () => (/* binding */ GH_PATH),
+/* harmony export */   "NAME": () => (/* binding */ NAME)
 /* harmony export */ });
-/* harmony import */ var poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! poor-man-jsx */ "./node_modules/poor-man-jsx/index.js");
-
-
-const Card = (id) =>
-  poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
-    <div class="card">
-      <img
-        class="card__img"
-        src="https://via.placeholder.com/200"
-        alt="placeholder"
-      />
-      <div class="card__body">
-        <h1 class="title card__title">This is card #${id}</h1>
-        <p class="card__text">
-          Lorem ipsum dolor sit amet consectetur adipisicing elit. Tempore
-          officiis mollitia obcaecati officia repellat dolores.
-        </p>
-        <hr />
-        <p class="card__subtext">Lorem ipsum dolor sit amet.</p>
-      </div>
-    </div>
-  `;
-
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (Card);
-
-
-/***/ }),
-
-/***/ "./src/components/Category.js":
-/*!************************************!*\
-  !*** ./src/components/Category.js ***!
-  \************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
-/* harmony export */ });
-/* harmony import */ var poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! poor-man-jsx */ "./node_modules/poor-man-jsx/index.js");
-/* harmony import */ var _Card__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./Card */ "./src/components/Card.js");
-
-
-
-const Category = ({ params }) => {
-  const length = 5;
-  const lowerLimit = params.id * length - length + 1;
-
-  return poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
-    ${new Array(length).fill().map((_, i) => (0,_Card__WEBPACK_IMPORTED_MODULE_1__.default)(lowerLimit + i))}
-  `;
-};
-
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (Category);
+const GH_PATH = '/restaurant-page';
+const NAME = 'My Restaurant';
 
 
 /***/ }),
@@ -973,23 +992,6 @@ class EventEmitter {
 
 /***/ }),
 
-/***/ "./src/event.js":
-/*!**********************!*\
-  !*** ./src/event.js ***!
-  \**********************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
-/* harmony export */ });
-/* harmony import */ var _emitter__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./emitter */ "./src/emitter.js");
-
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (new _emitter__WEBPACK_IMPORTED_MODULE_0__.default());
-
-
-/***/ }),
-
 /***/ "./src/history.js":
 /*!************************!*\
   !*** ./src/history.js ***!
@@ -1048,11 +1050,7 @@ const History = (() => {
   const clear = () => $.clear();
 
   const push = (path, state) => {
-    if (window.location.host.includes('github')) {
-      history.pushState(state, null, '/restaurant-page' + path);
-    } else {
-      history.pushState(state, null, path);
-    }
+    history.pushState(state, null, path);
     sync();
   };
 
@@ -1146,8 +1144,6 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 /* harmony import */ var poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! poor-man-jsx */ "./node_modules/poor-man-jsx/index.js");
-/* harmony import */ var _event__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../event */ "./src/event.js");
-
 
 
 const Contact = () => poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
@@ -1155,17 +1151,10 @@ const Contact = () => poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
   <form
     class="form"
     ${{
-      onChange: (e) => {
-        _event__WEBPACK_IMPORTED_MODULE_1__.default.emit(
-          'form input',
-          [...e.currentTarget.elements].some((el) => el.value)
-        );
-      },
       onSubmit: (e) => {
         e.preventDefault();
         alert('Thank you for your message');
         e.target.reset();
-        _event__WEBPACK_IMPORTED_MODULE_1__.default.emit('form input', false);
       },
     }}
   >
@@ -1244,7 +1233,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 /* harmony import */ var poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! poor-man-jsx */ "./node_modules/poor-man-jsx/index.js");
-/* harmony import */ var _history__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../history */ "./src/history.js");
+/* harmony import */ var _constants__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../constants */ "./src/constants.js");
+/* harmony import */ var _history__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../history */ "./src/history.js");
+
 
 
 
@@ -1261,7 +1252,7 @@ const Home = () => poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
         <button class="banner__btn">Order now</button>
         <a
           class="banner__link link"
-          ${{ onClick: () => _history__WEBPACK_IMPORTED_MODULE_1__.default.push('/menu') }}
+          ${{ onClick: () => _history__WEBPACK_IMPORTED_MODULE_2__.default.push(_constants__WEBPACK_IMPORTED_MODULE_1__.GH_PATH + '/menu') }}
         >
           See menu
         </a>
@@ -1270,7 +1261,7 @@ const Home = () => poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
     <div class="banner__column-r">
       <img
         class="banner__img"
-        src="./assets/images/banner_image.jpg"
+        src="https://via.placeholder.com/500x300?text=A+picture+of+food"
         alt="picture of ramen"
       />
     </div>
@@ -1294,9 +1285,11 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! poor-man-jsx */ "./node_modules/poor-man-jsx/index.js");
 /* harmony import */ var _components_Category__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../components/Category */ "./src/components/Category.js");
-/* harmony import */ var _history__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../history */ "./src/history.js");
-/* harmony import */ var _Router__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../Router */ "./src/Router.js");
-/* harmony import */ var _Error__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./Error */ "./src/pages/Error.js");
+/* harmony import */ var _components_Router__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../components/Router */ "./src/components/Router.js");
+/* harmony import */ var _Error__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./Error */ "./src/pages/Error.js");
+/* harmony import */ var _history__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../history */ "./src/history.js");
+/* harmony import */ var _constants__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../constants */ "./src/constants.js");
+
 
 
 
@@ -1304,14 +1297,14 @@ __webpack_require__.r(__webpack_exports__);
 
 
 const Menu = () => {
-  let self;
+  let title;
 
   const changeToDefaultTitle = () => {
-    self.textContent = 'Category';
+    title.textContent = 'Category';
   };
 
   const changeCategoryTitle = ({ params }) => {
-    self.textContent = `Category ${params.name}`;
+    title.textContent = `Category ${params.id}`;
   };
 
   return poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.html`
@@ -1323,7 +1316,7 @@ const Menu = () => {
               <li class="nav__item sidenav__item">
                 <a
                   class="link sidenav__link"
-                  ${{ onClick: () => _history__WEBPACK_IMPORTED_MODULE_2__.default.push(`/menu/${i + 1}`) }}
+                  ${{ onClick: () => _history__WEBPACK_IMPORTED_MODULE_4__.default.push(`${_constants__WEBPACK_IMPORTED_MODULE_5__.GH_PATH}/menu/${i + 1}`) }}
                 >
                   {% ${str} ${i + 1} %}
                 </a>
@@ -1333,36 +1326,36 @@ const Menu = () => {
       </ul>
     </aside>
     <section class="menu">
-      <h1
+      <h2
         class="title"
         ${{
           '@mount': function () {
-            self = this;
+            title = this;
 
-            _history__WEBPACK_IMPORTED_MODULE_2__.default.onChangeToPath('/menu', changeToDefaultTitle);
-            _history__WEBPACK_IMPORTED_MODULE_2__.default.onChangeToPath('/menu/:name', changeCategoryTitle);
+            _history__WEBPACK_IMPORTED_MODULE_4__.default.onChangeToPath(_constants__WEBPACK_IMPORTED_MODULE_5__.GH_PATH + '/menu', changeToDefaultTitle);
+            _history__WEBPACK_IMPORTED_MODULE_4__.default.onChangeToPath(_constants__WEBPACK_IMPORTED_MODULE_5__.GH_PATH + '/menu/:id', changeCategoryTitle);
           },
           '@unmount': () => {
-            _history__WEBPACK_IMPORTED_MODULE_2__.default.off(changeToDefaultTitle);
-            _history__WEBPACK_IMPORTED_MODULE_2__.default.off(changeCategoryTitle);
+            _history__WEBPACK_IMPORTED_MODULE_4__.default.off(changeToDefaultTitle);
+            _history__WEBPACK_IMPORTED_MODULE_4__.default.off(changeCategoryTitle);
           },
         }}
       >
         Category
-      </h1>
-      ${(0,_Router__WEBPACK_IMPORTED_MODULE_3__.default)(
+      </h2>
+      ${(0,_components_Router__WEBPACK_IMPORTED_MODULE_2__.default)(
         [
           {
-            path: '/menu/:id',
+            path: _constants__WEBPACK_IMPORTED_MODULE_5__.GH_PATH + '/menu/:id',
             component: _components_Category__WEBPACK_IMPORTED_MODULE_1__.default,
           },
           {
-            path: '/menu',
+            path: _constants__WEBPACK_IMPORTED_MODULE_5__.GH_PATH + '/menu',
             component: () =>
               'This is a nested route. Choose a category from sidebar for a demo.',
           },
         ],
-        _Error__WEBPACK_IMPORTED_MODULE_4__.default
+        _Error__WEBPACK_IMPORTED_MODULE_3__.default
       )}
     </section>
   `;
@@ -1511,25 +1504,8 @@ var __webpack_exports__ = {};
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! poor-man-jsx */ "./node_modules/poor-man-jsx/index.js");
 /* harmony import */ var _App__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./App */ "./src/App.js");
-/* harmony import */ var _event__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./event */ "./src/event.js");
-/* harmony import */ var _history__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./history */ "./src/history.js");
 
 
-
-
-
-let formHasValue = false;
-
-_event__WEBPACK_IMPORTED_MODULE_2__.default.on('form input', (hasInput) => {
-  formHasValue = hasInput;
-});
-
-window.addEventListener('beforeunload', (e) => {
-  if (formHasValue && window.location.pathname === '/contact') {
-    e.preventDefault();
-    e.returnValue = '';
-  }
-});
 
 (0,poor_man_jsx__WEBPACK_IMPORTED_MODULE_0__.render)((0,_App__WEBPACK_IMPORTED_MODULE_1__.default)(), document.body);
 
