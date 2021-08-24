@@ -5,7 +5,7 @@ const Card = (id) =>
     <div class="card">
       <img
         class="card__img"
-        src="https://via.placeholder.com/200"
+        src="https://via.placeholder.com/200?text=A+picture+of+food"
         alt="placeholder"
       />
       <div class="card__body">

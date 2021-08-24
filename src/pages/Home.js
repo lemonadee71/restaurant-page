@@ -1,4 +1,5 @@
 import { html } from 'poor-man-jsx';
+import { GH_PATH } from '../constants';
 import History from '../history';
 
 const Home = () => html`
@@ -14,7 +15,7 @@ const Home = () => html`
         <button class="banner__btn">Order now</button>
         <a
           class="banner__link link"
-          ${{ onClick: () => History.push('/menu') }}
+          ${{ onClick: () => History.push(GH_PATH + '/menu') }}
         >
           See menu
         </a>
@@ -23,7 +24,7 @@ const Home = () => html`
     <div class="banner__column-r">
       <img
         class="banner__img"
-        src="./assets/images/banner_image.jpg"
+        src="https://via.placeholder.com/500x300?text=A+picture+of+food"
         alt="picture of ramen"
       />
     </div>

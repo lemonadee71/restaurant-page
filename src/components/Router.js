@@ -1,6 +1,6 @@
 import { html, createState } from 'poor-man-jsx';
-import { getParams, getParamValues } from './utils';
-import History from './history';
+import { getParams, getParamValues } from '../utils';
+import History from '../history';
 
 // Will only render one component at a time
 const Router = (routes, error, className = '', tagName = 'div') => {

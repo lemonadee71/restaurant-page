@@ -1,22 +1,14 @@
 import { html } from 'poor-man-jsx';
-import event from '../event';
 
 const Contact = () => html`
   <h1 class="title title--centered">Message us</h1>
   <form
     class="form"
     ${{
-      onChange: (e) => {
-        event.emit(
-          'form input',
-          [...e.currentTarget.elements].some((el) => el.value)
-        );
-      },
       onSubmit: (e) => {
         e.preventDefault();
         alert('Thank you for your message');
         e.target.reset();
-        event.emit('form input', false);
       },
     }}
   >

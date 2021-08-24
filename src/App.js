@@ -1,39 +1,40 @@
 import { html } from 'poor-man-jsx';
+import Router from './components/Router';
+import { GH_PATH, NAME } from './constants';
 import History from './history';
-import Router from './Router';
 import * as pages from './pages';
 
 const routes = [
   {
-    path: '/',
+    path: GH_PATH + '/',
     name: 'Home',
-    title: 'My Restaurant',
+    title: `${NAME}`,
     component: pages.Home,
   },
   {
-    path: '/menu',
+    path: GH_PATH + '/menu',
     name: 'Menu',
-    title: 'My Restaurant | Menu',
+    title: `${NAME} | Menu`,
     exact: false,
     component: pages.Menu,
   },
   {
-    path: '/about',
+    path: GH_PATH + '/about',
     name: 'About',
-    title: 'My Restaurant | About Us',
+    title: `${NAME} | About Us`,
     component: pages.About,
   },
   {
-    path: '/contact',
+    path: GH_PATH + '/contact',
     name: 'Contact',
-    title: 'My Restaurant | Contact',
+    title: `${NAME} | Contact`,
     component: pages.Contact,
   },
 ];
 
 const App = () => html`
   <header class="header">
-    <span class="header__brand title">My Restaurant</span>
+    <span class="header__brand title">${NAME}</span>
     <nav class="header__nav nav">
       <ul class="nav__menu">
         ${routes.map(

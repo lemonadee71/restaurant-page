@@ -1,18 +1,19 @@
 import { html } from 'poor-man-jsx';
 import Category from '../components/Category';
-import History from '../history';
-import Router from '../Router';
+import Router from '../components/Router';
 import Error from './Error';
+import History from '../history';
+import { GH_PATH } from '../constants';
 
 const Menu = () => {
-  let self;
+  let title;
 
   const changeToDefaultTitle = () => {
-    self.textContent = 'Category';
+    title.textContent = 'Category';
   };
 
   const changeCategoryTitle = ({ params }) => {
-    self.textContent = `Category ${params.name}`;
+    title.textContent = `Category ${params.id}`;
   };
 
   return html`
@@ -24,7 +25,7 @@ const Menu = () => {
               <li class="nav__item sidenav__item">
                 <a
                   class="link sidenav__link"
-                  ${{ onClick: () => History.push(`/menu/${i + 1}`) }}
+                  ${{ onClick: () => History.push(`${GH_PATH}/menu/${i + 1}`) }}
                 >
                   {% ${str} ${i + 1} %}
                 </a>
@@ -34,14 +35,14 @@ const Menu = () => {
       </ul>
     </aside>
     <section class="menu">
-      <h1
+      <h2
         class="title"
         ${{
           '@mount': function () {
-            self = this;
+            title = this;
 
-            History.onChangeToPath('/menu', changeToDefaultTitle);
-            History.onChangeToPath('/menu/:name', changeCategoryTitle);
+            History.onChangeToPath(GH_PATH + '/menu', changeToDefaultTitle);
+            History.onChangeToPath(GH_PATH + '/menu/:id', changeCategoryTitle);
           },
           '@unmount': () => {
             History.off(changeToDefaultTitle);
@@ -50,15 +51,15 @@ const Menu = () => {
         }}
       >
         Category
-      </h1>
+      </h2>
       ${Router(
         [
           {
-            path: '/menu/:id',
+            path: GH_PATH + '/menu/:id',
             component: Category,
           },
           {
-            path: '/menu',
+            path: GH_PATH + '/menu',
             component: () =>
               'This is a nested route. Choose a category from sidebar for a demo.',
           },
